@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>SmartTouch</title>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      color: #222;
+    }
+
+    header {
+      background: #111827;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      opacity: 0.8;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .search {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .status {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .business {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    }
+
+    .business h2 {
+      margin-top: 0;
+    }
+
+    .business p {
+      color: #555;
+    }
+
+    .tag {
+      display: inline-block;
+      background: #e5e7eb;
+      padding: 6px 10px;
+      border-radius: 20px;
+      margin: 3px;
+      font-size: 13px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 30px;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 15px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>SmartTouch</h1>
+    <p>Encontrá comercios y servicios cerca tuyo</p>
+  </header>
+
+  <main class="container">
+
+    <input
+      id="search"
+      class="search"
+      type="text"
+      placeholder="🔎 Buscar comercio..."
+    >
+
+    <div id="status" class="status">
+      Cargando comercios...
+    </div>
+
+    <div id="businesses">
+      <div class="loading">Cargando...</div>
+    </div>
+
+  </main>
+
+  <script>
+
+    // ==========================================
+    // CONFIGURACIÓN SUPABASE
+    // ==========================================
+
+    const SUPABASE_URL = "https://ojkucshtbdjfbypnoqil.supabase.co";
+
+    const SUPABASE_KEY = "sb_publishable_rOq0IjRmFElzZTfvNZNPcg_DIbr__yS";
+
+    const supabaseClient = supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+
+    // ==========================================
+    // VARIABLES
+    // ==========================================
+
+    let businesses = [];
+
+
+    // ==========================================
+    // CARGAR COMERCIOS
+    // ==========================================
+async function loadBusinesses() {
+
+  const container = document.getElementById("businesses");
+  const status = document.getElementById("status");
+
+  status.innerHTML = "🔄 Probando conexión con Supabase...";
+
+  try {
+
+    const { data, error } = await supabaseClient
+      .from("businesses")
+      .select("*")
+      .limit(5);
+
+    if (error) {
+      throw error;
+    }
+
+    console.log("Respuesta Supabase:", data);
+
+    businesses = data || [];
+
+    status.innerHTML = `
+      <strong>🟢 CONEXIÓN EXITOSA</strong>
+      <br>
+      Supabase respondió correctamente.
+      <br>
+      Comercios encontrados: ${businesses.length}
+    `;
+
+    renderBusinesses(businesses);
+
+  } catch (error) {
+
+    console.error("Error Supabase:", error);
+
+    status.innerHTML = `
+      <div class="error">
+        <strong>🔴 ERROR DE CONEXIÓN</strong>
+        <br><br>
+        ${error.message}
+      </div>
+    `;
+
+    container.innerHTML = "";
+
+  }
+}}
+
+
+    // ==========================================
+    // MOSTRAR COMERCIOS
+    // ==========================================
+
+    function renderBusinesses(list) {
+
+      const container = document.getElementById("businesses");
+
+      if (!list.length) {
+
+        container.innerHTML = `
+          <div class="business">
+            No encontramos comercios.
+          </div>
+        `;
+
+        return;
+      }
+
+      container.innerHTML = list.map(business => `
+
+        <div class="business">
+
+          <h2>
+            ${business.name || "Comercio sin nombre"}
+          </h2>
+
+          <p>
+            ${business.description || "Sin descripción"}
+          </p>
+
+          ${
+            business.address
+              ? `<p>📍 ${business.address}</p>`
+              : ""
+          }
+
+          ${
+            business.phone
+              ? `<p>📞 ${business.phone}</p>`
+              : ""
+          }
+
+        </div>
+
+      `).join("");
+
+    }
+
+
+    // ==========================================
+    // BUSCADOR
+    // ==========================================
+
+    document
+      .getElementById("search")
+      .addEventListener("input", function() {
+
+        const search = this.value.toLowerCase().trim();
+
+        const filtered = businesses.filter(business => {
+
+          const name =
+            business.name?.toLowerCase() || "";
+
+          const description =
+            business.description?.toLowerCase() || "";
+
+          const address =
+            business.address?.toLowerCase() || "";
+
+          return (
+            name.includes(search) ||
+            description.includes(search) ||
+            address.includes(search)
+          );
+
+        });
+
+        renderBusinesses(filtered);
+
+      });
+
+
+    // ==========================================
+    // INICIAR
+    // ==========================================
+
+    loadBusinesses();
+
+  </script>
+
+</body>
+</html>
