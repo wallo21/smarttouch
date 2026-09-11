@@ -208,48 +208,76 @@ async function loadBusinesses() {
 
     function renderBusinesses(list) {
 
-      const container = document.getElementById("businesses");
+  const container = document.getElementById("businesses");
 
-      if (!list.length) {
+  if (!list.length) {
+    container.innerHTML = `
+      <div class="business">
+        No encontramos comercios.
+      </div>
+    `;
+    return;
+  }
 
-        container.innerHTML = `
-          <div class="business">
-            No encontramos comercios.
-          </div>
-        `;
+  container.innerHTML = list.map(business => `
+    <div class="business" 
+         onclick="showBusiness('${business.slug}')"
+         style="cursor:pointer;">
 
-        return;
+      <h2>${business.name || "Comercio sin nombre"}</h2>
+
+      <p>${business.description || "Sin descripción"}</p>
+
+      <p style="margin-top:15px;">
+        👉 Ver comercio
+      </p>
+
+    </div>
+  `).join("");
+
+}
+
+
+function showBusiness(slug) {
+
+  const business = businesses.find(item => item.slug === slug);
+
+  if (!business) {
+    return;
+  }
+
+  const container = document.getElementById("businesses");
+
+  container.innerHTML = `
+    <div class="business">
+
+      <h2>${business.name || "Comercio sin nombre"}</h2>
+
+      <p>
+        ${business.description || "Sin descripción"}
+      </p>
+
+      ${
+        business.whatsapp
+          ? `<p>📱 WhatsApp: ${business.whatsapp}</p>`
+          : ""
       }
 
-      container.innerHTML = list.map(business => `
+      ${
+        business.instagram
+          ? `<p>📸 Instagram disponible</p>`
+          : ""
+      }
 
-        <div class="business">
+      <br>
 
-          <h2>
-            ${business.name || "Comercio sin nombre"}
-          </h2>
+      <button onclick="renderBusinesses(businesses)">
+        ← Volver a comercios
+      </button>
 
-          <p>
-            ${business.description || "Sin descripción"}
-          </p>
-
-          ${
-            business.address
-              ? `<p>📍 ${business.address}</p>`
-              : ""
-          }
-
-          ${
-            business.phone
-              ? `<p>📞 ${business.phone}</p>`
-              : ""
-          }
-
-        </div>
-
-      `).join("");
-
-    }
+    </div>
+  `;
+}
 
 
     // ==========================================
