@@ -251,6 +251,14 @@ function showBusiness(slug) {
   container.innerHTML = `
     <div class="business">
 
+      ${
+        business.logo_url
+          ? `<img src="${business.logo_url}" 
+                  alt="${business.name}" 
+                  style="max-width:120px;border-radius:15px;">`
+          : ""
+      }
+
       <h2>${business.name || "Comercio sin nombre"}</h2>
 
       <p>
@@ -259,13 +267,56 @@ function showBusiness(slug) {
 
       ${
         business.whatsapp
-          ? `<p>📱 WhatsApp: ${business.whatsapp}</p>`
+          ? `<p>
+               <a href="https://wa.me/${String(business.whatsapp).replace(/\D/g, '')}"
+                  target="_blank">
+                 🟢 WhatsApp
+               </a>
+             </p>`
           : ""
       }
 
       ${
         business.instagram
-          ? `<p>📸 Instagram disponible</p>`
+          ? `<p>
+               <a href="${business.instagram}"
+                  target="_blank">
+                 📸 Instagram
+               </a>
+             </p>`
+          : ""
+      }
+
+      ${
+        business.maps_url
+          ? `<p>
+               <a href="${business.maps_url}"
+                  target="_blank">
+                 📍 Cómo llegar
+               </a>
+             </p>`
+          : ""
+      }
+
+      ${
+        business.google_url
+          ? `<p>
+               <a href="${business.google_url}"
+                  target="_blank">
+                 ⭐ Google
+               </a>
+             </p>`
+          : ""
+      }
+
+      ${
+        business.payment_url
+          ? `<p>
+               <a href="${business.payment_url}"
+                  target="_blank">
+                 💳 Pagar
+               </a>
+             </p>`
           : ""
       }
 
