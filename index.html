@@ -173,7 +173,20 @@ async function loadBusinesses() {
     console.log("Respuesta Supabase:", data);
 
     businesses = data || [];
+    
+const params = new URLSearchParams(window.location.search);
+const comercioSlug = params.get("comercio");
 
+if (comercioSlug) {
+  const comercio = businesses.find(
+    business => business.slug === comercioSlug
+  );
+
+  if (comercio) {
+    showBusiness(comercio.slug);
+    return;
+  }
+}
     status.innerHTML = `
       <strong>🟢 CONEXIÓN EXITOSA</strong>
       <br>
