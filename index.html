@@ -97,7 +97,8 @@
       padding: 15px;
       border-radius: 10px;
     }
- /* ================================
+
+    /* ================================
    SMARTTOUCH - DISEÑO PREMIUM
 ================================ */
 
@@ -385,9 +386,7 @@ if (comercioSlug) {
 
 }
 
-
 function showBusiness(slug) {
-
   const business = businesses.find(item => item.slug === slug);
 
   if (!business) {
@@ -396,77 +395,115 @@ function showBusiness(slug) {
 
   const container = document.getElementById("businesses");
 
+  const category = business.category || "comercio";
+
+  const categoryNames = {
+    barberia: "Barbería",
+    gym: "Fitness & Gym",
+    hotel: "Hotel",
+    gastronomia: "Gastronomía",
+    comercio: "Comercio"
+  };
+
+  const categoryName = categoryNames[category] || "Comercio";
+
   container.innerHTML = `
-    <div class="business">
+    <div class="business smarttouch-profile smarttouch-${category}">
+
+      <span class="smarttouch-category">
+        ${categoryName}
+      </span>
 
       ${
         business.logo_url
-          ? `<img src="${business.logo_url}" 
-                  alt="${business.name}" 
-                  style="max-width:120px;border-radius:15px;">`
+          ? `
+            <div style="margin-bottom:20px;">
+              <img 
+                src="${business.logo_url}"
+                alt="${business.name || "Comercio"}"
+                style="max-width:120px;border-radius:18px;"
+              >
+            </div>
+          `
           : ""
       }
 
-      <h2>${business.name || "Comercio sin nombre"}</h2>
+      <h2>
+        ${business.name || "Comercio sin nombre"}
+      </h2>
 
-      <p>
+      <p class="smarttouch-description">
         ${business.description || "Sin descripción"}
       </p>
 
-      ${
-        business.whatsapp
-          ? `<p>
-               <a href="https://wa.me/${String(business.whatsapp).replace(/\D/g, '')}"
-                  target="_blank">
-                 🟢 WhatsApp
-               </a>
-             </p>`
-          : ""
-      }
+      <div class="smarttouch-actions">
 
-      ${
-        business.instagram
-          ? `<p>
-               <a href="${business.instagram}"
-                  target="_blank">
-                 📸 Instagram
-               </a>
-             </p>`
-          : ""
-      }
+        ${
+          business.whatsapp
+            ? `
+              <a 
+                href="https://wa.me/${String(business.whatsapp).replace(/\D/g, '')}"
+                target="_blank"
+              >
+                🟢 WhatsApp
+              </a>
+            `
+            : ""
+        }
 
-      ${
-        business.maps_url
-          ? `<p>
-               <a href="${business.maps_url}"
-                  target="_blank">
-                 📍 Cómo llegar
-               </a>
-             </p>`
-          : ""
-      }
+        ${
+          business.instagram
+            ? `
+              <a 
+                href="${business.instagram}"
+                target="_blank"
+              >
+                📸 Instagram
+              </a>
+            `
+            : ""
+        }
 
-      ${
-        business.google_url
-          ? `<p>
-               <a href="${business.google_url}"
-                  target="_blank">
-                 ⭐ Google
-               </a>
-             </p>`
-          : ""
-      }
+        ${
+          business.maps_url
+            ? `
+              <a 
+                href="${business.maps_url}"
+                target="_blank"
+              >
+                📍 Cómo llegar
+              </a>
+            `
+            : ""
+        }
 
-      ${
-        business.payment_url
-          ? `<p>
-               <a href="${business.payment_url}"
-                  target="_blank">
-                 💳 Pagar
-               </a>
-             </p>`
-          : ""
-      }
+        ${
+          business.google_url
+            ? `
+              <a 
+                href="${business.google_url}"
+                target="_blank"
+              >
+                ⭐ Dejanos tu opinión en Google
+              </a>
+            `
+            : ""
+        }
+
+        ${
+          business.payment_url
+            ? `
+              <a 
+                href="${business.payment_url}"
+                target="_blank"
+              >
+                💳 Pagar
+              </a>
+            `
+            : ""
+        }
+
+      </div>
 
       <br>
 
@@ -477,7 +514,6 @@ function showBusiness(slug) {
     </div>
   `;
 }
-
 
     // ==========================================
     // BUSCADOR
