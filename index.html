@@ -395,7 +395,9 @@ function showBusiness(slug) {
 
   const container = document.getElementById("businesses");
 
-  const category = business.category || "comercio";
+  const category = String(business.category || "comercio")
+  .trim()
+  .toLowerCase();
 
   const categoryNames = {
     barberia: "Barbería",
@@ -406,6 +408,8 @@ function showBusiness(slug) {
   };
 
   const categoryName = categoryNames[category] || "Comercio";
+  
+  console.log("SMARTTOUCH:", business.name, "CATEGORY:", category);
 
   container.innerHTML = `
     <div class="business smarttouch-profile smarttouch-${category}">
