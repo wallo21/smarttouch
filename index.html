@@ -306,6 +306,88 @@
 
     let businesses = [];
 
+    // ==========================================
+// SMARTTOUCH ANALYTICS
+// ==========================================
+
+function getSessionId() {
+  let sessionId = sessionStorage.getItem("smarttouch_session_id");
+
+  if (!sessionId) {
+    sessionId =
+      "st_" +
+      Date.now() +
+      "_" +
+      Math.random().toString(36).substring(2, 12);
+
+    sessionStorage.setItem(
+      "smarttouch_session_id",
+      sessionId
+    );
+  }
+
+  return sessionId;
+}
+
+
+function getDeviceType() {
+  const width = window.innerWidth;
+
+  if (width <= 767) {
+    return "mobile";
+  }
+
+  if (width <= 1024) {
+    return "tablet";
+  }
+
+  return "desktop";
+}
+
+
+async function trackAction(businessId, eventKey) {
+
+  if (!businessId || !eventKey) {
+    return;
+  }
+
+  try {
+
+    const { error } = await supabaseClient
+      .from("actions")
+      .insert({
+        business_id: businessId,
+        event_key: eventKey,
+        session_id: getSessionId(),
+        device_type: getDeviceType(),
+        source: new URLSearchParams(
+          window.location.search
+        ).get("source") || "direct",
+        user_agent: navigator.userAgent
+      });
+
+    if (error) {
+      console.error(
+        "SmartTouch Analytics Error:",
+        error
+      );
+    } else {
+      console.log(
+        "SmartTouch Analytics:",
+        eventKey
+      );
+    }
+
+  } catch (error) {
+
+    console.error(
+      "SmartTouch Analytics Exception:",
+      error
+    );
+
+  }
+}
+
 
     // ==========================================
     // CARGAR COMERCIOS
@@ -414,7 +496,10 @@ function showBusiness(slug) {
   if (!business) {
     return;
   }
-
+trackAction(
+  business.id,
+  "profile_view"
+);
   const container = document.getElementById("businesses");
 
   const category = String(business.category || "comercio")
@@ -470,6 +555,7 @@ function showBusiness(slug) {
               <a 
                 href="https://wa.me/${String(business.whatsapp).replace(/\D/g, '')}"
                 target="_blank"
+                onclick="trackAction('${business.id}', 'whatsapp_click')"
               >
                 🟢 WhatsApp
               </a>
@@ -483,6 +569,7 @@ function showBusiness(slug) {
               <a 
                 href="${business.instagram}"
                 target="_blank"
+                onclick="trackAction('${business.id}', 'maps_click')"
               >
                 📸 Instagram
               </a>
@@ -496,6 +583,7 @@ function showBusiness(slug) {
               <a 
                 href="${business.maps_url}"
                 target="_blank"
+                onclick="trackAction('${business.id}', 'maps_click')"
               >
                 📍 Cómo llegar
               </a>
@@ -509,6 +597,7 @@ function showBusiness(slug) {
               <a 
                 href="${business.google_url}"
                 target="_blank"
+                onclick="trackAction('${business.id}', 'google_click')"
               >
                 ⭐ Dejanos tu opinión en Google
               </a>
@@ -522,6 +611,7 @@ function showBusiness(slug) {
               <a 
                 href="${business.payment_url}"
                 target="_blank"
+                onclick="trackAction('${business.id}', 'payment_click')"
               >
                 💳 Pagar
               </a>
