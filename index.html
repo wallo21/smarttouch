@@ -354,16 +354,13 @@ async function trackAction(businessId, eventKey) {
   try {
 
     const { error } = await supabaseClient
-      .from("actions")
+      .from("events")
       .insert({
         business_id: businessId,
         event_key: eventKey,
-        session_id: getSessionId(),
-        device_type: getDeviceType(),
-        source: new URLSearchParams(
-          window.location.search
-        ).get("source") || "direct",
-        user_agent: navigator.userAgent
+        source:
+          new URLSearchParams(window.location.search).get("source")
+          || "direct"
       });
 
     if (error) {
@@ -387,7 +384,6 @@ async function trackAction(businessId, eventKey) {
 
   }
 }
-
 
     // ==========================================
     // CARGAR COMERCIOS
