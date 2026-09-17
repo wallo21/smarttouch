@@ -346,45 +346,40 @@ function getDeviceType() {
 
 
 async function trackAction(businessId, eventKey) {
-
   if (!businessId || !eventKey) {
     return;
   }
 
   try {
+    const params = new URLSearchParams(window.location.search);
+
+    const sourceParam = params.get("source");
+
+    const source =
+      sourceParam === "nfc" ||
+      sourceParam === "qr" ||
+      sourceParam === "web"
+        ? sourceParam
+        : null;
 
     const { error } = await supabaseClient
       .from("events")
       .insert({
         business_id: businessId,
         event_key: eventKey,
-        source:
-          new URLSearchParams(window.location.search).get("source")
-          || "direct"
+        source: source
       });
 
     if (error) {
-      console.error(
-        "SmartTouch Analytics Error:",
-        error
-      );
+      console.error("SmartTouch Analytics Error:", error);
     } else {
-      console.log(
-        "SmartTouch Analytics:",
-        eventKey
-      );
+      console.log("SmartTouch Analytics:", eventKey);
     }
 
   } catch (error) {
-
-    console.error(
-      "SmartTouch Analytics Exception:",
-      error
-    );
-
+    console.error("SmartTouch Analytics Exception:", error);
   }
 }
-
     // ==========================================
     // CARGAR COMERCIOS
     // ==========================================
