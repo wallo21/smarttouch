@@ -342,39 +342,70 @@ function getDeviceType() {
 }
 
 
-async function trackAction(businessId, eventKey) {
+async function trackAction(businessId, eventKey, tagId = null) {
+
   if (!businessId || !eventKey) {
     return;
   }
 
   try {
+
     const params = new URLSearchParams(window.location.search);
+
+    // Si estamos entrando mediante un tag,
+    // el origen oficial viene de la tabla tags.
+    const tagSource = window.smartTouchSource;
 
     const sourceParam = params.get("source");
 
     const source =
-      sourceParam === "nfc" ||
-      sourceParam === "qr" ||
-      sourceParam === "web"
-        ? sourceParam
-        : null;
+      tagSource === "nfc" ||
+      tagSource === "qr"
+        ? tagSource
+        : (
+            sourceParam === "nfc" ||
+            sourceParam === "qr" ||
+            sourceParam === "web"
+              ? sourceParam
+              : null
+          );
 
     const { error } = await supabaseClient
       .from("events")
       .insert({
         business_id: businessId,
+        tag_id: tagId || window.smartTouchTagId || null,
         event_key: eventKey,
         source: source
       });
 
     if (error) {
-      console.error("SmartTouch Analytics Error:", error);
+
+      console.error(
+        "SmartTouch Analytics Error:",
+        error
+      );
+
     } else {
-      console.log("SmartTouch Analytics:", eventKey);
+
+      console.log(
+        "SmartTouch Analytics:",
+        eventKey,
+        "Tag:",
+        tagId || window.smartTouchTagId || null,
+        "Source:",
+        source
+      );
+
     }
 
   } catch (error) {
-    console.error("SmartTouch Analytics Exception:", error);
+
+    console.error(
+      "SmartTouch Analytics Exception:",
+      error
+    );
+
   }
 }
     // ==========================================
