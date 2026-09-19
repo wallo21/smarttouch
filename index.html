@@ -403,9 +403,71 @@ async function loadBusinesses() {
     businesses = data || [];
     
 const params = new URLSearchParams(window.location.search);
+
+const tagCode = params.get("tag");
 const comercioSlug = params.get("comercio");
 
+// ==========================================
+// CARGAR COMERCIO DESDE TAG
+// ==========================================
+if (tagCode) {
+
+  try {
+
+    const { data: tag, error: tagError } = await supabaseClient
+      .from("tags")
+      .select("*")
+      .eq("tag_code", tagCode)
+      .eq("active", true)
+      .single();
+
+    if (tagError) {
+      throw tagError;
+    }
+
+    if (tag) {
+
+      console.log("SmartTouch Tag:", tag);
+
+      const { data: comercio, error: businessError } =
+        await supabaseClient
+          .from("businesses")
+          .select("*")
+          .eq("id", tag.business_id)
+          .single();
+
+      if (businessError) {
+        throw businessError;
+      }
+
+      if (comercio) {
+
+        // Guardamos la información del tag
+        window.smartTouchTagId = tag.id;
+        window.smartTouchTagCode = tag.tag_code;
+        window.smartTouchSource = tag.source;
+
+        console.log("SmartTouch Comercio:", comercio);
+        console.log("SmartTouch Tag ID:", tag.id);
+        console.log("SmartTouch Source:", tag.source);
+
+        showBusiness(comercio.slug);
+        return;
+      }
+    }
+
+  } catch (error) {
+
+    console.error("SmartTouch Tag Error:", error);
+
+  }
+}
+
+// ==========================================
+// CARGAR COMERCIO DESDE SLUG
+// ==========================================
 if (comercioSlug) {
+
   const comercio = businesses.find(
     business => business.slug === comercioSlug
   );
