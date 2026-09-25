@@ -443,57 +443,67 @@ const comercioSlug = params.get("comercio");
 // ==========================================
 if (tagCode) {
 
+  const openedFromTag = await openFromTag(tagCode);
+
+  if (openedFromTag) {
+    return;
+  }
+}
+// ==========================================
+// ABRIR COMERCIO DESDE TAG
+// ==========================================
+async function openFromTag(tagCode) {
+
   try {
 
-    const { data: tag, error: tagError } = await supabaseClient
-      .from("tags")
-      .select("*")
-      .eq("tag_code", tagCode)
-      .eq("active", true)
-      .single();
+    const { data: tag, error: tagError } =
+      await supabaseClient
+        .from("tags")
+        .select("*")
+        .eq("tag_code", tagCode)
+        .eq("active", true)
+        .single();
 
-    if (tagError) {
-      throw tagError;
+    if (tagError || !tag) {
+      console.error("SmartTouch Tag Error:", tagError);
+      return false;
     }
 
-    if (tag) {
+    window.smartTouchTagId = tag.id;
+    window.smartTouchTagCode = tag.tag_code;
+    window.smartTouchSource = tag.source;
 
-      console.log("SmartTouch Tag:", tag);
+    const { data: comercio, error: businessError } =
+      await supabaseClient
+        .from("businesses")
+        .select("*")
+        .eq("id", tag.business_id)
+        .single();
 
-      const { data: comercio, error: businessError } =
-        await supabaseClient
-          .from("businesses")
-          .select("*")
-          .eq("id", tag.business_id)
-          .single();
-
-      if (businessError) {
-        throw businessError;
-      }
-
-      if (comercio) {
-
-        // Guardamos la información del tag
-        window.smartTouchTagId = tag.id;
-        window.smartTouchTagCode = tag.tag_code;
-        window.smartTouchSource = tag.source;
-
-        console.log("SmartTouch Comercio:", comercio);
-        console.log("SmartTouch Tag ID:", tag.id);
-        console.log("SmartTouch Source:", tag.source);
-
-        showBusiness(comercio.slug);
-        return;
-      }
+    if (businessError || !comercio) {
+      console.error(
+        "SmartTouch Business Error:",
+        businessError
+      );
+      return false;
     }
+
+    console.log("SmartTouch Tag:", tag);
+    console.log("SmartTouch Comercio:", comercio);
+    console.log("SmartTouch Tag ID:", tag.id);
+    console.log("SmartTouch Source:", tag.source);
+
+    showBusiness(comercio.slug);
+
+    return true;
 
   } catch (error) {
 
-    console.error("SmartTouch Tag Error:", error);
+    console.error("SmartTouch Tag Exception:", error);
 
+    return false;
   }
 }
-
 // ==========================================
 // CARGAR COMERCIO DESDE SLUG
 // ==========================================
