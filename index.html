@@ -423,7 +423,7 @@ async function loadBusinesses() {
     const { data, error } = await supabaseClient
       .from("businesses")
       .select("*")
-      .limit(5);
+      
 
     if (error) {
       throw error;
