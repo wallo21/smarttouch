@@ -30,6 +30,12 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
     .panel{background:#fff;padding:20px;border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
     .panel h3{margin-top:0}
+    .section-title{margin:28px 0 14px}
+    .badge{display:inline-block;padding:5px 8px;border-radius:999px;background:#eef2f7;font-size:11px;font-weight:700}
+    .source-row{display:flex;align-items:center;gap:10px;margin:13px 0}
+    .source-name{width:95px;font-size:13px;font-weight:700}
+    .tag-code{font-weight:800;font-size:13px}
+    .tag-label{font-size:12px;color:#6b7280;margin-top:3px}
     .row{display:flex;align-items:center;gap:10px;margin:12px 0}
     .row .name{width:130px;font-size:13px;font-weight:700}
     .bar{height:10px;background:#e5e7eb;border-radius:20px;overflow:hidden;flex:1}
@@ -87,6 +93,18 @@
         <div id="dailyTable"></div>
       </div>
     </div>
+
+    <h2 class="section-title">Origen de las interacciones</h2>
+    <div class="grid">
+      <div class="panel">
+        <h3>NFC · QR · Web</h3>
+        <div id="sourceChart"></div>
+      </div>
+      <div class="panel">
+        <h3>Rendimiento por tag</h3>
+        <div id="tagTable"></div>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -98,6 +116,8 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let businesses = [];
 let currentStats = [];
 let currentDaily = [];
+let currentSources = [];
+let currentTags = [];
 
 const $ = id => document.getElementById(id);
 
@@ -192,9 +212,11 @@ async function loadBusinesses(){
 async function loadStats(businessId){
   $("status").textContent = "Actualizando métricas...";
 
-  const [statsResult, dailyResult] = await Promise.all([
+  const [statsResult, dailyResult, sourceResult, tagResult] = await Promise.all([
     supabaseClient.rpc("get_business_stats",{p_business_id:businessId}),
-    supabaseClient.rpc("get_business_daily_stats",{p_business_id:businessId})
+    supabaseClient.rpc("get_business_daily_stats",{p_business_id:businessId}),
+    supabaseClient.rpc("get_business_source_stats",{p_business_id:businessId}),
+    supabaseClient.rpc("get_business_tag_stats",{p_business_id:businessId})
   ]);
 
   if(statsResult.error){
@@ -209,12 +231,28 @@ async function loadStats(businessId){
     return;
   }
 
+  if(sourceResult.error){
+    $("status").textContent = "Error al consultar origen de interacciones.";
+    console.error(sourceResult.error);
+    return;
+  }
+
+  if(tagResult.error){
+    $("status").textContent = "Error al consultar rendimiento por tag.";
+    console.error(tagResult.error);
+    return;
+  }
+
   currentStats = statsResult.data || [];
   currentDaily = dailyResult.data || [];
+  currentSources = sourceResult.data || [];
+  currentTags = tagResult.data || [];
 
   renderCards(currentStats);
   renderActions(currentStats);
   renderDaily(currentDaily);
+  renderSources(currentSources);
+  renderTags(currentTags);
 
   const business = businesses.find(b => b.id === businessId);
   $("status").textContent = business ? "Datos de " + business.name : "Datos actualizados";
@@ -267,6 +305,52 @@ function renderDaily(rows){
     '<table><thead><tr><th>Fecha</th><th>Eventos</th></tr></thead><tbody>' +
     days.map(day =>
       '<tr><td>' + escapeHtml(day) + '</td><td><strong>' + grouped[day] + '</strong></td></tr>'
+    ).join("") +
+    '</tbody></table>';
+}
+
+function renderSources(rows){
+  if(!rows.length){
+    $("sourceChart").innerHTML = '<div class="empty">Todavía no hay datos de origen.</div>';
+    return;
+  }
+
+  const names = {
+    direct: "Web / Directo",
+    nfc: "NFC",
+    qr: "QR",
+    web: "Web"
+  };
+
+  const max = Math.max(...rows.map(x => Number(x.total)),1);
+
+  $("sourceChart").innerHTML = rows.map(x => {
+    const key = String(x.source || "direct").toLowerCase();
+    const label = names[key] || key;
+    const width = Math.max(3, Math.round(Number(x.total) / max * 100));
+    return '<div class="source-row">' +
+      '<div class="source-name">' + escapeHtml(label) + '</div>' +
+      '<div class="bar"><div class="fill" style="width:' + width + '%"></div></div>' +
+      '<div class="num">' + Number(x.total) + '</div>' +
+      '</div>';
+  }).join("");
+}
+
+function renderTags(rows){
+  if(!rows.length){
+    $("tagTable").innerHTML = '<div class="empty">Todavía no hay tags con actividad.</div>';
+    return;
+  }
+
+  $("tagTable").innerHTML =
+    '<table><thead><tr><th>Tag</th><th>Tipo</th><th>Interacciones</th></tr></thead><tbody>' +
+    rows.map(x =>
+      '<tr>' +
+      '<td><div class="tag-code">' + escapeHtml(x.tag_code) + '</div>' +
+      '<div class="tag-label">' + escapeHtml(x.tag_name) + '</div></td>' +
+      '<td><span class="badge">' + escapeHtml(String(x.source || "").toUpperCase()) + '</span></td>' +
+      '<td><strong>' + Number(x.total) + '</strong></td>' +
+      '</tr>'
     ).join("") +
     '</tbody></table>';
 }
