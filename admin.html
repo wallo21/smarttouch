@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartTouch · Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:#f4f5f7;color:#18202a}
+    header{background:#111827;color:#fff;padding:20px 24px;display:flex;justify-content:space-between;align-items:center}
+    header h1{margin:0;font-size:24px}
+    header span{font-size:13px;opacity:.75}
+    .wrap{max-width:1100px;margin:auto;padding:24px}
+    .login{max-width:420px;margin:60px auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+    h2{margin-top:0}
+    label{display:block;font-size:13px;font-weight:700;margin:14px 0 6px}
+    input,select{width:100%;padding:13px;border:1px solid #d7dce3;border-radius:10px;font-size:15px;background:#fff}
+    button{border:0;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer}
+    .primary{background:#111827;color:#fff;width:100%;margin-top:18px}
+    .logout{background:#374151;color:#fff}
+    .error{margin-top:14px;background:#fee2e2;color:#991b1b;padding:12px;border-radius:10px;font-size:14px}
+    .muted{color:#6b7280;font-size:13px}
+    .hidden{display:none!important}
+    .toolbar{background:#fff;padding:18px;border-radius:16px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+    .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+    .card{background:#fff;padding:20px;border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+    .card .label{font-size:13px;color:#6b7280;font-weight:700}
+    .card .value{font-size:30px;font-weight:800;margin-top:7px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .panel{background:#fff;padding:20px;border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+    .panel h3{margin-top:0}
+    .row{display:flex;align-items:center;gap:10px;margin:12px 0}
+    .row .name{width:130px;font-size:13px;font-weight:700}
+    .bar{height:10px;background:#e5e7eb;border-radius:20px;overflow:hidden;flex:1}
+    .fill{height:100%;background:#111827;border-radius:20px}
+    .num{width:35px;text-align:right;font-weight:700;font-size:13px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #eee}
+    th{color:#6b7280}
+    .empty{color:#6b7280;padding:10px 0}
+    @media(max-width:750px){.cards{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+    @media(max-width:480px){.cards{grid-template-columns:1fr}.wrap{padding:15px}}
+  </style>
+</head>
+<body>
+<header>
+  <div><h1>SmartTouch</h1><span>Dashboard de Analytics</span></div>
+  <button id="logoutBtn" class="logout hidden">Cerrar sesión</button>
+</header>
+
+<main class="wrap">
+  <section id="loginView" class="login">
+    <h2>Acceso administrador</h2>
+    <p class="muted">Ingresá con la cuenta autorizada para ver las métricas de SmartTouch.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="email" placeholder="admin@...">
+    <label for="password">Contraseña</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+    <button id="loginBtn" class="primary">Ingresar</button>
+    <div id="loginError" class="error hidden"></div>
+  </section>
+
+  <section id="dashboardView" class="hidden">
+    <div class="toolbar">
+      <label for="businessSelect">Comercio</label>
+      <select id="businessSelect"></select>
+      <p id="status" class="muted"></p>
+    </div>
+
+    <div class="cards">
+      <div class="card"><div class="label">👁 VISITAS AL PERFIL</div><div id="profileViews" class="value">0</div></div>
+      <div class="card"><div class="label">💬 WHATSAPP</div><div id="whatsappClicks" class="value">0</div></div>
+      <div class="card"><div class="label">📸 INSTAGRAM</div><div id="instagramClicks" class="value">0</div></div>
+      <div class="card"><div class="label">📍 MAPS</div><div id="mapsClicks" class="value">0</div></div>
+      <div class="card"><div class="label">💳 PAGOS</div><div id="paymentClicks" class="value">0</div></div>
+      <div class="card"><div class="label">⭐ GOOGLE</div><div id="googleClicks" class="value">0</div></div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h3>Acciones de clientes</h3>
+        <div id="actionsChart"></div>
+      </div>
+      <div class="panel">
+        <h3>Actividad diaria</h3>
+        <div id="dailyTable"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL = "https://ojkucshtbdjfbypnoqil.supabase.co";
+const SUPABASE_KEY = "sb_publishable_rOq0IjRmFElzZTfvNZNPcg_DIbr__yS";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let businesses = [];
+let currentStats = [];
+let currentDaily = [];
+
+const $ = id => document.getElementById(id);
+
+const labels = {
+  profile_view: "Visitas al perfil",
+  whatsapp_click: "WhatsApp",
+  instagram_click: "Instagram",
+  maps_click: "Maps",
+  payment_click: "Pagos",
+  google_click: "Google",
+  share_click: "Compartir"
+};
+
+function showLoginError(message){
+  $("loginError").textContent = message;
+  $("loginError").classList.remove("hidden");
+}
+
+function clearLoginError(){
+  $("loginError").classList.add("hidden");
+}
+
+async function login(){
+  clearLoginError();
+  const email = $("email").value.trim();
+  const password = $("password").value;
+
+  if(!email || !password){
+    showLoginError("Completá email y contraseña.");
+    return;
+  }
+
+  $("loginBtn").disabled = true;
+  $("loginBtn").textContent = "Ingresando...";
+
+  const { error } = await supabaseClient.auth.signInWithPassword({email,password});
+
+  $("loginBtn").disabled = false;
+  $("loginBtn").textContent = "Ingresar";
+
+  if(error){
+    showLoginError("No se pudo iniciar sesión. Verificá tus datos.");
+    return;
+  }
+
+  await initDashboard();
+}
+
+async function initDashboard(){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  if(!session){
+    $("loginView").classList.remove("hidden");
+    $("dashboardView").classList.add("hidden");
+    $("logoutBtn").classList.add("hidden");
+    return;
+  }
+
+  $("loginView").classList.add("hidden");
+  $("dashboardView").classList.remove("hidden");
+  $("logoutBtn").classList.remove("hidden");
+
+  await loadBusinesses();
+}
+
+async function loadBusinesses(){
+  $("status").textContent = "Cargando comercios...";
+
+  const { data, error } = await supabaseClient
+    .from("businesses")
+    .select("id,name,slug")
+    .order("name");
+
+  if(error){
+    $("status").textContent = "No se pudieron cargar los comercios.";
+    console.error(error);
+    return;
+  }
+
+  businesses = data || [];
+  $("businessSelect").innerHTML = businesses.map(b =>
+    '<option value="' + b.id + '">' + escapeHtml(b.name) + '</option>'
+  ).join("");
+
+  if(businesses.length){
+    await loadStats(businesses[0].id);
+  } else {
+    $("status").textContent = "No hay comercios registrados.";
+  }
+}
+
+async function loadStats(businessId){
+  $("status").textContent = "Actualizando métricas...";
+
+  const [statsResult, dailyResult] = await Promise.all([
+    supabaseClient.rpc("get_business_stats",{p_business_id:businessId}),
+    supabaseClient.rpc("get_business_daily_stats",{p_business_id:businessId})
+  ]);
+
+  if(statsResult.error){
+    $("status").textContent = "Error al consultar Analytics.";
+    console.error(statsResult.error);
+    return;
+  }
+
+  if(dailyResult.error){
+    $("status").textContent = "Error al consultar actividad diaria.";
+    console.error(dailyResult.error);
+    return;
+  }
+
+  currentStats = statsResult.data || [];
+  currentDaily = dailyResult.data || [];
+
+  renderCards(currentStats);
+  renderActions(currentStats);
+  renderDaily(currentDaily);
+
+  const business = businesses.find(b => b.id === businessId);
+  $("status").textContent = business ? "Datos de " + business.name : "Datos actualizados";
+}
+
+function renderCards(stats){
+  const get = key => {
+    const row = stats.find(x => x.event_key === key);
+    return row ? Number(row.total) : 0;
+  };
+  $("profileViews").textContent = get("profile_view");
+  $("whatsappClicks").textContent = get("whatsapp_click");
+  $("instagramClicks").textContent = get("instagram_click");
+  $("mapsClicks").textContent = get("maps_click");
+  $("paymentClicks").textContent = get("payment_click");
+  $("googleClicks").textContent = get("google_click");
+}
+
+function renderActions(stats){
+  const visible = stats.filter(x => x.event_key);
+  if(!visible.length){
+    $("actionsChart").innerHTML = '<div class="empty">Todavía no hay eventos.</div>';
+    return;
+  }
+
+  const max = Math.max(...visible.map(x => Number(x.total)),1);
+  $("actionsChart").innerHTML = visible.map(x => {
+    const width = Math.max(3, Math.round(Number(x.total) / max * 100));
+    const label = labels[x.event_key] || x.event_key;
+    return '<div class="row"><div class="name">' + escapeHtml(label) +
+      '</div><div class="bar"><div class="fill" style="width:' + width + '%"></div></div>' +
+      '<div class="num">' + Number(x.total) + '</div></div>';
+  }).join("");
+}
+
+function renderDaily(rows){
+  if(!rows.length){
+    $("dailyTable").innerHTML = '<div class="empty">Todavía no hay actividad diaria.</div>';
+    return;
+  }
+
+  const grouped = {};
+  rows.forEach(r => {
+    if(!grouped[r.day]) grouped[r.day] = 0;
+    grouped[r.day] += Number(r.total);
+  });
+
+  const days = Object.keys(grouped).sort().reverse();
+  $("dailyTable").innerHTML =
+    '<table><thead><tr><th>Fecha</th><th>Eventos</th></tr></thead><tbody>' +
+    days.map(day =>
+      '<tr><td>' + escapeHtml(day) + '</td><td><strong>' + grouped[day] + '</strong></td></tr>'
+    ).join("") +
+    '</tbody></table>';
+}
+
+function escapeHtml(value){
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
+
+$("loginBtn").addEventListener("click",login);
+$("password").addEventListener("keydown",e => { if(e.key === "Enter") login(); });
+$("email").addEventListener("keydown",e => { if(e.key === "Enter") login(); });
+
+$("businessSelect").addEventListener("change",e => loadStats(e.target.value));
+
+$("logoutBtn").addEventListener("click",async () => {
+  await supabaseClient.auth.signOut();
+  location.reload();
+});
+
+supabaseClient.auth.onAuthStateChange(() => initDashboard());
+initDashboard();
+</script>
+</body>
+</html>
