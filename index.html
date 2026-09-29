@@ -559,12 +559,45 @@ if (comercioSlug) {
 
 }
 
-function showBusiness(slug) {
+
+async function loadBusinessActions(businessId){
+  const { data, error } = await supabaseClient
+    .from("actions")
+    .select("id,label,icon,url,event_key,sort_order,active")
+    .eq("business_id", businessId)
+    .eq("active", true)
+    .order("sort_order", { ascending:true })
+    .order("created_at", { ascending:true });
+  if(error){
+    console.error("SmartTouch Actions Error:", error);
+    return [];
+  }
+  return data || [];
+}
+
+function buildActionButtons(actions, business){
+  return actions.map(action => {
+    const label = action.label || "Abrir";
+    const icon = action.icon ? action.icon + " " : "";
+    const url = String(action.url || "#").replace(/"/g, "&quot;");
+    const eventKey = String(action.event_key || "button_click").replace(/[^a-zA-Z0-9_]/g, "_");
+    return `
+      <a href="${url}" target="_blank" rel="noopener noreferrer"
+         onclick="trackAction('${business.id}', '${eventKey}', window.smartTouchTagId || null)">
+        ${icon}${label}
+      </a>
+    `;
+  }).join("");
+}
+
+async function showBusiness(slug) {
   const business = businesses.find(item => item.slug === slug);
 
   if (!business) {
     return;
   }
+
+  const configuredActions = await loadBusinessActions(business.id);
 trackAction(
   business.id,
   "profile_view",
@@ -618,77 +651,23 @@ trackAction(
       </p>
 
       <div class="smarttouch-actions">
-
-        ${
-          business.whatsapp
-            ? `
-              <a 
-                href="https://wa.me/${String(business.whatsapp).replace(/\D/g, '')}"
-                target="_blank"
-                onclick="trackAction('${business.id}', 'whatsapp_click', window.smartTouchTagId || null)"
-              >
-                🟢 WhatsApp
-              </a>
-            `
-            : ""
-        }
-
-        ${
-          business.instagram
-            ? `
-              <a 
-                href="${business.instagram}"
-                target="_blank"
-                onclick="trackAction('${business.id}', 'instagram_click', window.smartTouchTagId || null)"
-              >
-                📸 Instagram
-              </a>
-            `
-            : ""
-        }
-
-        ${
-          business.maps_url
-            ? `
-              <a 
-                href="${business.maps_url}"
-                target="_blank"
-                onclick="trackAction('${business.id}', 'maps_click', window.smartTouchTagId || null)"
-              >
-                📍 Cómo llegar
-              </a>
-            `
-            : ""
-        }
-
-        ${
-          business.google_url
-            ? `
-              <a 
-                href="${business.google_url}"
-                target="_blank"
-                onclick="trackAction('${business.id}', 'google_click', window.smartTouchTagId || null)"
-              >
-                ⭐ Dejanos tu opinión en Google
-              </a>
-            `
-            : ""
-        }
-
-        ${
-          business.payment_url
-            ? `
-              <a 
-                href="${business.payment_url}"
-                target="_blank"
-                onclick="trackAction('${business.id}', 'payment_click', window.smartTouchTagId || null)"
-              >
-                💳 Pagar
-              </a>
-            `
-            : ""
-        }
-
+        ${configuredActions.length ? buildActionButtons(configuredActions, business) : `
+          ${business.whatsapp ? `
+            <a href="https://wa.me/${String(business.whatsapp).replace(/\\D/g, '')}" target="_blank" rel="noopener noreferrer" onclick="trackAction('${business.id}', 'whatsapp_click', window.smartTouchTagId || null)">🟢 WhatsApp</a>
+          ` : ""}
+          ${business.instagram ? `
+            <a href="${business.instagram}" target="_blank" rel="noopener noreferrer" onclick="trackAction('${business.id}', 'instagram_click', window.smartTouchTagId || null)">📸 Instagram</a>
+          ` : ""}
+          ${business.maps_url ? `
+            <a href="${business.maps_url}" target="_blank" rel="noopener noreferrer" onclick="trackAction('${business.id}', 'maps_click', window.smartTouchTagId || null)">📍 Cómo llegar</a>
+          ` : ""}
+          ${business.google_url ? `
+            <a href="${business.google_url}" target="_blank" rel="noopener noreferrer" onclick="trackAction('${business.id}', 'google_click', window.smartTouchTagId || null)">⭐ Dejanos tu opinión en Google</a>
+          ` : ""}
+          ${business.payment_url ? `
+            <a href="${business.payment_url}" target="_blank" rel="noopener noreferrer" onclick="trackAction('${business.id}', 'payment_click', window.smartTouchTagId || null)">💳 Pagar</a>
+          ` : ""}
+        `}
       </div>
 
       <br>
