@@ -36,6 +36,14 @@
     .source-name{width:95px;font-size:13px;font-weight:700}
     .tag-code{font-weight:800;font-size:13px}
     .tag-label{font-size:12px;color:#6b7280;margin-top:3px}
+    .conversion-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+    .mini-card{background:#f8fafc;border:1px solid #eef1f5;padding:14px;border-radius:12px}
+    .mini-label{font-size:12px;color:#6b7280;font-weight:700}
+    .mini-value{font-size:24px;font-weight:800;margin-top:5px}
+    .conversion-row{display:flex;align-items:center;gap:10px;margin:13px 0}
+    .conversion-name{width:120px;font-size:13px;font-weight:700}
+    .percent{width:55px;text-align:right;font-size:13px;font-weight:800}
+    .conversion-note{margin-top:14px;font-size:11px;color:#6b7280;line-height:1.45}
     .row{display:flex;align-items:center;gap:10px;margin:12px 0}
     .row .name{width:130px;font-size:13px;font-weight:700}
     .bar{height:10px;background:#e5e7eb;border-radius:20px;overflow:hidden;flex:1}
@@ -91,6 +99,18 @@
       <div class="panel">
         <h3>Actividad diaria</h3>
         <div id="dailyTable"></div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Tasas de conversión</h2>
+    <div class="grid">
+      <div class="panel">
+        <h3>Del perfil a la acción</h3>
+        <div id="conversionChart"></div>
+      </div>
+      <div class="panel">
+        <h3>Resumen de interacción</h3>
+        <div id="conversionSummary"></div>
       </div>
     </div>
 
@@ -251,6 +271,7 @@ async function loadStats(businessId){
   renderCards(currentStats);
   renderActions(currentStats);
   renderDaily(currentDaily);
+  renderConversions(currentStats);
   renderSources(currentSources);
   renderTags(currentTags);
 
@@ -307,6 +328,50 @@ function renderDaily(rows){
       '<tr><td>' + escapeHtml(day) + '</td><td><strong>' + grouped[day] + '</strong></td></tr>'
     ).join("") +
     '</tbody></table>';
+}
+
+function renderConversions(stats){
+  const get = key => {
+    const row = stats.find(x => x.event_key === key);
+    return row ? Number(row.total) : 0;
+  };
+
+  const profiles = get("profile_view");
+  const actions = [
+    ["whatsapp_click","WhatsApp"],
+    ["instagram_click","Instagram"],
+    ["maps_click","Maps"],
+    ["payment_click","Pagos"],
+    ["google_click","Google"],
+    ["share_click","Compartir"]
+  ];
+
+  if(!profiles){
+    $("conversionChart").innerHTML = '<div class="empty">Todavía no hay suficientes visitas para calcular conversiones.</div>';
+  } else {
+    $("conversionChart").innerHTML = actions.map(([key,label]) => {
+      const total = get(key);
+      const rate = (total / profiles) * 100;
+      const shown = rate.toFixed(1);
+      const width = Math.min(100, Math.max(2, rate));
+      return '<div class="conversion-row">' +
+        '<div class="conversion-name">' + escapeHtml(label) + '</div>' +
+        '<div class="bar"><div class="fill" style="width:' + width + '%"></div></div>' +
+        '<div class="percent">' + shown + '%</div>' +
+        '</div>';
+    }).join("");
+  }
+
+  const totalActions = actions.reduce((sum,[key]) => sum + get(key),0);
+  const interactionRate = profiles ? (totalActions / profiles) * 100 : 0;
+
+  $("conversionSummary").innerHTML =
+    '<div class="conversion-summary">' +
+      '<div class="mini-card"><div class="mini-label">VISITAS</div><div class="mini-value">' + profiles + '</div></div>' +
+      '<div class="mini-card"><div class="mini-label">ACCIONES</div><div class="mini-value">' + totalActions + '</div></div>' +
+    '</div>' +
+    '<div class="mini-card"><div class="mini-label">TASA DE INTERACCIÓN</div><div class="mini-value">' + interactionRate.toFixed(1) + '%</div></div>' +
+    '<div class="conversion-note">La tasa compara la cantidad de clics registrados con las visitas al perfil. No representa usuarios únicos: una misma persona puede generar más de una acción.</div>';
 }
 
 function renderSources(rows){
