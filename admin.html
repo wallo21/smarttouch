@@ -28,6 +28,7 @@
     .secondary{background:#e5e7eb;color:#111827}
     .toolbar-action{white-space:nowrap;width:auto}
     .create-panel{background:#fff;padding:22px;border-radius:16px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+    .edit-panel{background:#fff;padding:22px;border-radius:16px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
     .form-grid .full{grid-column:1/-1}
     .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
@@ -94,7 +95,7 @@
           <label for="businessSelect">Comercio</label>
           <select id="businessSelect"></select>
         </div>
-        <button id="newBusinessBtn" class="secondary toolbar-action" type="button">＋ Nuevo comercio</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end"><button id="editBusinessBtn" class="secondary toolbar-action" type="button">✏️ Editar comercio</button><button id="newBusinessBtn" class="secondary toolbar-action" type="button">＋ Nuevo comercio</button></div>
       </div>
       <p id="status" class="muted"></p>
     </div>
@@ -160,6 +161,31 @@
         <div class="form-actions">
           <button id="cancelNewBusinessBtn" class="secondary" type="button">Cancelar</button>
           <button id="saveNewBusinessBtn" class="primary" type="submit">Crear comercio</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="editBusinessPanel" class="edit-panel hidden">
+      <h3>Editar comercio</h3>
+      <p class="muted">Modificá los datos que aparecen en el perfil público. El slug cambia la URL del comercio.</p>
+      <form id="editBusinessForm">
+        <div class="form-grid">
+          <div><label for="editName">Nombre del comercio *</label><input id="editName" required maxlength="100"></div>
+          <div><label for="editSlug">Slug / URL *</label><input id="editSlug" required maxlength="100"><div class="hint">Si cambiás el slug, también cambia la URL pública.</div></div>
+          <div class="full"><label for="editDescription">Descripción</label><input id="editDescription" maxlength="180"></div>
+          <div><label for="editCategory">Categoría *</label><select id="editCategory"><option value="gastronomia">Gastronomía</option><option value="barberia">Barbería</option><option value="gym">Gym</option><option value="hotel">Hotel</option><option value="otros">Otros</option></select></div>
+          <div><label for="editTheme">Tema *</label><select id="editTheme"><option value="premium">Premium</option><option value="comercial">Comercial</option></select></div>
+          <div><label for="editWhatsapp">WhatsApp</label><input id="editWhatsapp" maxlength="30"></div>
+          <div><label for="editInstagram">Instagram</label><input id="editInstagram" maxlength="120"></div>
+          <div><label for="editGoogle">Google Reviews</label><input id="editGoogle" maxlength="500"></div>
+          <div><label for="editMaps">Google Maps</label><input id="editMaps" maxlength="500"></div>
+          <div class="full"><label for="editPayment">Link de pago</label><input id="editPayment" maxlength="500"></div>
+        </div>
+        <div id="editBusinessError" class="error hidden"></div>
+        <div id="editBusinessSuccess" class="success hidden"></div>
+        <div class="form-actions">
+          <button id="cancelEditBusinessBtn" class="secondary" type="button">Cancelar</button>
+          <button id="saveEditBusinessBtn" class="primary" type="submit">Guardar cambios</button>
         </div>
       </form>
     </section>
@@ -325,6 +351,99 @@ function closeCreateBusiness(){
   $("createBusinessPanel").classList.add("hidden");
 }
 
+function showEditBusinessError(message){
+  $("editBusinessError").textContent = message;
+  $("editBusinessError").classList.remove("hidden");
+  $("editBusinessSuccess").classList.add("hidden");
+}
+
+function showEditBusinessSuccess(message){
+  $("editBusinessSuccess").textContent = message;
+  $("editBusinessSuccess").classList.remove("hidden");
+  $("editBusinessError").classList.add("hidden");
+}
+
+function openEditBusiness(){
+  const id = $("businessSelect").value;
+  const business = businesses.find(b => b.id === id);
+  if(!business) return;
+  $("editName").value = business.name || "";
+  $("editSlug").value = business.slug || "";
+  $("editDescription").value = business.description || "";
+  $("editCategory").value = business.category || "gastronomia";
+  $("editTheme").value = business.theme || "premium";
+  $("editWhatsapp").value = business.whatsapp || "";
+  $("editInstagram").value = business.instagram || "";
+  $("editGoogle").value = business.google_url || "";
+  $("editMaps").value = business.maps_url || "";
+  $("editPayment").value = business.payment_url || "";
+  $("editBusinessError").classList.add("hidden");
+  $("editBusinessSuccess").classList.add("hidden");
+  $("createBusinessPanel").classList.add("hidden");
+  $("editBusinessPanel").classList.remove("hidden");
+  $("editName").focus();
+}
+
+function closeEditBusiness(){
+  $("editBusinessPanel").classList.add("hidden");
+}
+
+async function updateBusiness(event){
+  event.preventDefault();
+  const id = $("businessSelect").value;
+  const oldBusiness = businesses.find(b => b.id === id);
+  if(!oldBusiness) return;
+
+  const name = $("editName").value.trim();
+  const slug = slugify($("editSlug").value.trim() || name);
+  if(!name || !slug){
+    showEditBusinessError("Completá nombre y slug.");
+    return;
+  }
+
+  const duplicate = businesses.some(b => b.id !== id && b.slug === slug);
+  if(duplicate){
+    showEditBusinessError("Ese slug ya está usado por otro comercio.");
+    return;
+  }
+
+  $("saveEditBusinessBtn").disabled = true;
+  $("saveEditBusinessBtn").textContent = "Guardando...";
+
+  const { error } = await supabaseClient
+    .from("businesses")
+    .update({
+      name,
+      slug,
+      description: $("editDescription").value.trim() || null,
+      category: $("editCategory").value,
+      theme: $("editTheme").value,
+      whatsapp: $("editWhatsapp").value.trim() || null,
+      instagram: $("editInstagram").value.trim() || null,
+      google_url: $("editGoogle").value.trim() || null,
+      maps_url: $("editMaps").value.trim() || null,
+      payment_url: $("editPayment").value.trim() || null
+    })
+    .eq("id", id);
+
+  $("saveEditBusinessBtn").disabled = false;
+  $("saveEditBusinessBtn").textContent = "Guardar cambios";
+
+  if(error){
+    console.error(error);
+    showEditBusinessError(error.code === "42501"
+      ? "Supabase bloqueó la edición. Falta habilitar UPDATE para usuarios autenticados."
+      : "No se pudieron guardar los cambios. " + (error.message || ""));
+    return;
+  }
+
+  showEditBusinessSuccess("Cambios guardados correctamente.");
+  await loadBusinesses();
+  $("businessSelect").value = id;
+  await loadStats(id);
+  setTimeout(closeEditBusiness, 700);
+}
+
 async function createBusiness(event){
   event.preventDefault();
 
@@ -401,7 +520,7 @@ async function loadBusinesses(){
 
   const { data, error } = await supabaseClient
     .from("businesses")
-    .select("id,name,slug")
+    .select("id,name,slug,description,category,theme,whatsapp,instagram,google_url,maps_url,payment_url")
     .order("name");
 
   if(error){
@@ -621,6 +740,9 @@ function escapeHtml(value){
 
 $("loginBtn").addEventListener("click",login);
 
+$("editBusinessBtn").addEventListener("click",openEditBusiness);
+$("cancelEditBusinessBtn").addEventListener("click",closeEditBusiness);
+$("editBusinessForm").addEventListener("submit",updateBusiness);
 $("newBusinessBtn").addEventListener("click",openCreateBusiness);
 $("cancelNewBusinessBtn").addEventListener("click",closeCreateBusiness);
 $("createBusinessForm").addEventListener("submit",createBusiness);
