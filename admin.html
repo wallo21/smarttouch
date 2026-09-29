@@ -28,7 +28,7 @@
     .secondary{background:#e5e7eb;color:#111827}
     .toolbar-action{white-space:nowrap;width:auto}
     .create-panel{background:#fff;padding:22px;border-radius:16px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
-    .edit-panel{background:#fff;padding:22px;border-radius:16px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+    .edit-panel{background:#fff;padding:22px;border-radius:16px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.06)}\n    .actions-panel{background:#fff;padding:22px;border-radius:16px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.06)}\n    .action-item{border:1px solid #e5e7eb;border-radius:14px;padding:14px;margin:10px 0;background:#fafafa}\n    .action-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}\n    .action-title{font-weight:800;font-size:15px}.action-meta{font-size:12px;color:#6b7280;margin-top:4px;word-break:break-word}\n    .action-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.action-buttons button{padding:8px 11px;font-size:12px}\n    .toggle-on{background:#dcfce7;color:#166534}.toggle-off{background:#fee2e2;color:#991b1b}\n    .danger{background:#fee2e2;color:#991b1b}.small-note{font-size:12px;color:#6b7280;line-height:1.45}
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
     .form-grid .full{grid-column:1/-1}
     .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
@@ -95,7 +95,7 @@
           <label for="businessSelect">Comercio</label>
           <select id="businessSelect"></select>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end"><button id="editBusinessBtn" class="secondary toolbar-action" type="button">✏️ Editar comercio</button><button id="newBusinessBtn" class="secondary toolbar-action" type="button">＋ Nuevo comercio</button></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end"><button id="editBusinessBtn" class="secondary toolbar-action" type="button">✏️ Editar comercio</button><button id="manageActionsBtn" class="secondary toolbar-action" type="button">🔘 Botones</button><button id="newBusinessBtn" class="secondary toolbar-action" type="button">＋ Nuevo comercio</button></div>
       </div>
       <p id="status" class="muted"></p>
     </div>
@@ -190,6 +190,58 @@
       </form>
     </section>
 
+
+    <section id="actionsPanel" class="actions-panel hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0">Botones del perfil</h3>
+          <p class="muted" style="margin-bottom:0">Configurá qué botones aparecen en el perfil público y qué evento registra cada clic.</p>
+        </div>
+        <button id="newActionBtn" class="secondary toolbar-action" type="button">＋ Nuevo botón</button>
+      </div>
+
+      <div id="actionsManagerList" style="margin-top:16px"></div>
+
+      <section id="actionFormPanel" class="edit-panel hidden" style="margin-top:16px;margin-bottom:0;padding:18px">
+        <h3 id="actionFormTitle">Nuevo botón</h3>
+        <form id="actionForm">
+          <input id="actionId" type="hidden">
+          <div class="form-grid">
+            <div>
+              <label for="actionLabel">Texto del botón *</label>
+              <input id="actionLabel" required maxlength="80" placeholder="Ej.: WhatsApp">
+            </div>
+            <div>
+              <label for="actionIcon">Ícono</label>
+              <input id="actionIcon" maxlength="10" placeholder="💬">
+            </div>
+            <div class="full">
+              <label for="actionUrl">URL de destino *</label>
+              <input id="actionUrl" required maxlength="1000" placeholder="https://...">
+            </div>
+            <div>
+              <label for="actionEventKey">Evento Analytics *</label>
+              <input id="actionEventKey" required maxlength="80" placeholder="whatsapp_click">
+              <div class="hint">Usá nombres simples como whatsapp_click, instagram_click, menu_click, reservar_click.</div>
+            </div>
+            <div>
+              <label for="actionSortOrder">Orden</label>
+              <input id="actionSortOrder" type="number" min="0" max="999" value="0">
+            </div>
+            <div class="full">
+              <label><input id="actionActive" type="checkbox" checked style="width:auto;margin-right:8px"> Botón visible en el perfil público</label>
+            </div>
+          </div>
+          <div id="actionFormError" class="error hidden"></div>
+          <div id="actionFormSuccess" class="success hidden"></div>
+          <div class="form-actions">
+            <button id="cancelActionBtn" class="secondary" type="button">Cancelar</button>
+            <button id="saveActionBtn" class="primary" type="submit">Guardar botón</button>
+          </div>
+        </form>
+      </section>
+    </section>
+
     <div class="cards">
       <div class="card"><div class="label">👁 VISITAS AL PERFIL</div><div id="profileViews" class="value">0</div></div>
       <div class="card"><div class="label">💬 WHATSAPP</div><div id="whatsappClicks" class="value">0</div></div>
@@ -245,7 +297,7 @@ let businesses = [];
 let currentStats = [];
 let currentDaily = [];
 let currentSources = [];
-let currentTags = [];
+let currentTags = [];\nlet currentActions = [];
 
 const $ = id => document.getElementById(id);
 
@@ -591,6 +643,153 @@ async function loadStats(businessId){
   $("status").textContent = business ? "Datos de " + business.name : "Datos actualizados";
 }
 
+
+function showActionError(message){
+  $("actionFormError").textContent = message;
+  $("actionFormError").classList.remove("hidden");
+  $("actionFormSuccess").classList.add("hidden");
+}
+function showActionSuccess(message){
+  $("actionFormSuccess").textContent = message;
+  $("actionFormSuccess").classList.remove("hidden");
+  $("actionFormError").classList.add("hidden");
+}
+function closeActionsPanel(){
+  $("actionsPanel").classList.add("hidden");
+  $("actionFormPanel").classList.add("hidden");
+}
+async function openActionsPanel(){
+  const businessId = $("businessSelect").value;
+  if(!businessId) return;
+  $("createBusinessPanel").classList.add("hidden");
+  $("editBusinessPanel").classList.add("hidden");
+  $("actionsPanel").classList.remove("hidden");
+  await loadActions(businessId);
+}
+function openNewAction(){
+  $("actionForm").reset();
+  $("actionId").value = "";
+  $("actionActive").checked = true;
+  $("actionSortOrder").value = currentActions.length ? Math.max(...currentActions.map(a => Number(a.sort_order) || 0)) + 1 : 0;
+  $("actionFormTitle").textContent = "Nuevo botón";
+  $("actionFormError").classList.add("hidden");
+  $("actionFormSuccess").classList.add("hidden");
+  $("actionFormPanel").classList.remove("hidden");
+  $("actionLabel").focus();
+}
+function editAction(id){
+  const action = currentActions.find(a => a.id === id);
+  if(!action) return;
+  $("actionId").value = action.id;
+  $("actionLabel").value = action.label || "";
+  $("actionIcon").value = action.icon || "";
+  $("actionUrl").value = action.url || "";
+  $("actionEventKey").value = action.event_key || "";
+  $("actionSortOrder").value = Number(action.sort_order) || 0;
+  $("actionActive").checked = action.active !== false;
+  $("actionFormTitle").textContent = "Editar botón";
+  $("actionFormError").classList.add("hidden");
+  $("actionFormSuccess").classList.add("hidden");
+  $("actionFormPanel").classList.remove("hidden");
+  $("actionLabel").focus();
+}
+async function loadActions(businessId){
+  $("actionsManagerList").innerHTML = '<div class="empty">Cargando botones...</div>';
+  const { data, error } = await supabaseClient
+    .from("actions")
+    .select("id,business_id,label,icon,url,event_key,sort_order,active")
+    .eq("business_id", businessId)
+    .order("sort_order", { ascending:true })
+    .order("created_at", { ascending:true });
+  if(error){
+    console.error(error);
+    $("actionsManagerList").innerHTML = '<div class="error">No se pudieron cargar los botones. Si aparece código 42501, falta habilitar permisos de acciones para usuarios autenticados.</div>';
+    return;
+  }
+  currentActions = data || [];
+  renderActionManager();
+}
+function renderActionManager(){
+  if(!currentActions.length){
+    $("actionsManagerList").innerHTML =
+      '<div class="empty">Este comercio todavía no tiene botones configurados.</div>' +
+      '<p class="small-note">Podés crear el primero con “Nuevo botón”.</p>';
+    return;
+  }
+  $("actionsManagerList").innerHTML = currentActions.map(action => {
+    const active = action.active !== false;
+    return '<div class="action-item">' +
+      '<div class="action-top">' +
+        '<div><div class="action-title">' + escapeHtml((action.icon || "🔘") + " " + (action.label || "Sin texto")) + '</div>' +
+        '<div class="action-meta">Evento: <strong>' + escapeHtml(action.event_key || "") + '</strong> · Orden: ' + Number(action.sort_order || 0) + '</div>' +
+        '<div class="action-meta">' + escapeHtml(action.url || "") + '</div></div>' +
+        '<span class="badge">' + (active ? "ACTIVO" : "OCULTO") + '</span>' +
+      '</div>' +
+      '<div class="action-buttons">' +
+        '<button type="button" class="secondary" onclick="editAction(\'' + action.id + '\')">✏️ Editar</button>' +
+        '<button type="button" class="' + (active ? "toggle-off" : "toggle-on") + '" onclick="toggleAction(\'' + action.id + '\',' + (!active) + ')">' + (active ? "🙈 Ocultar" : "👁 Mostrar") + '</button>' +
+        '<button type="button" class="danger" onclick="deleteAction(\'' + action.id + '\')">🗑 Eliminar</button>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+}
+async function saveAction(event){
+  event.preventDefault();
+  const businessId = $("businessSelect").value;
+  const id = $("actionId").value.trim();
+  const label = $("actionLabel").value.trim();
+  const icon = $("actionIcon").value.trim();
+  const url = $("actionUrl").value.trim();
+  const eventKey = $("actionEventKey").value.trim().toLowerCase().replace(/[^a-z0-9_]+/g,"_").replace(/^_+|_+$/g,"");
+  const sortOrder = Math.max(0, Math.min(999, Number($("actionSortOrder").value) || 0));
+  const active = $("actionActive").checked;
+  if(!businessId || !label || !url || !eventKey){
+    showActionError("Completá texto, URL y evento Analytics.");
+    return;
+  }
+  $("saveActionBtn").disabled = true;
+  $("saveActionBtn").textContent = "Guardando...";
+  const payload = { business_id:businessId, label, icon:icon || null, url, event_key:eventKey, sort_order:sortOrder, active };
+  const result = id
+    ? await supabaseClient.from("actions").update(payload).eq("id", id).eq("business_id", businessId)
+    : await supabaseClient.from("actions").insert(payload);
+  $("saveActionBtn").disabled = false;
+  $("saveActionBtn").textContent = "Guardar botón";
+  if(result.error){
+    console.error(result.error);
+    showActionError(result.error.code === "42501"
+      ? "Supabase bloqueó esta operación. Falta habilitar permisos de acciones para usuarios autenticados."
+      : "No se pudo guardar el botón. " + (result.error.message || ""));
+    return;
+  }
+  showActionSuccess(id ? "Botón actualizado correctamente." : "Botón creado correctamente.");
+  await loadActions(businessId);
+  setTimeout(() => $("actionFormPanel").classList.add("hidden"), 500);
+}
+async function toggleAction(id, active){
+  const businessId = $("businessSelect").value;
+  const { error } = await supabaseClient.from("actions").update({active}).eq("id",id).eq("business_id",businessId);
+  if(error){
+    console.error(error);
+    alert(error.code === "42501" ? "Falta habilitar UPDATE de acciones para usuarios autenticados." : "No se pudo cambiar el estado del botón.");
+    return;
+  }
+  await loadActions(businessId);
+}
+async function deleteAction(id){
+  const action = currentActions.find(a => a.id === id);
+  if(!action) return;
+  if(!confirm('¿Eliminar el botón "' + (action.label || "") + '"? Esta acción no se puede deshacer.')) return;
+  const businessId = $("businessSelect").value;
+  const { error } = await supabaseClient.from("actions").delete().eq("id",id).eq("business_id",businessId);
+  if(error){
+    console.error(error);
+    alert(error.code === "42501" ? "Falta habilitar DELETE de acciones para usuarios autenticados." : "No se pudo eliminar el botón.");
+    return;
+  }
+  await loadActions(businessId);
+}
+
 function renderCards(stats){
   const get = key => {
     const row = stats.find(x => x.event_key === key);
@@ -740,7 +939,7 @@ function escapeHtml(value){
 
 $("loginBtn").addEventListener("click",login);
 
-$("editBusinessBtn").addEventListener("click",openEditBusiness);
+$("editBusinessBtn").addEventListener("click",openEditBusiness);\n$("manageActionsBtn").addEventListener("click",openActionsPanel);\n$("newActionBtn").addEventListener("click",openNewAction);\n$("cancelActionBtn").addEventListener("click",() => $("actionFormPanel").classList.add("hidden"));\n$("actionForm").addEventListener("submit",saveAction);
 $("cancelEditBusinessBtn").addEventListener("click",closeEditBusiness);
 $("editBusinessForm").addEventListener("submit",updateBusiness);
 $("newBusinessBtn").addEventListener("click",openCreateBusiness);
@@ -757,7 +956,7 @@ $("newName").addEventListener("input",e => {
 $("password").addEventListener("keydown",e => { if(e.key === "Enter") login(); });
 $("email").addEventListener("keydown",e => { if(e.key === "Enter") login(); });
 
-$("businessSelect").addEventListener("change",e => loadStats(e.target.value));
+$("businessSelect").addEventListener("change",async e => { closeActionsPanel(); await loadStats(e.target.value); });
 
 $("logoutBtn").addEventListener("click",async () => {
   await supabaseClient.auth.signOut();
