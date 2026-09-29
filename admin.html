@@ -23,6 +23,18 @@
     .muted{color:#6b7280;font-size:13px}
     .hidden{display:none!important}
     .toolbar{background:#fff;padding:18px;border-radius:16px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+    .toolbar-top{display:flex;justify-content:space-between;align-items:end;gap:14px}
+    .toolbar-top .field{flex:1}
+    .secondary{background:#e5e7eb;color:#111827}
+    .toolbar-action{white-space:nowrap;width:auto}
+    .create-panel{background:#fff;padding:22px;border-radius:16px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+    .form-grid .full{grid-column:1/-1}
+    .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+    .form-actions button{width:auto;margin-top:0}
+    .success{margin-top:14px;background:#dcfce7;color:#166534;padding:12px;border-radius:10px;font-size:14px}
+    .hint{font-size:11px;color:#6b7280;margin-top:5px}
+    @media(max-width:650px){.toolbar-top{align-items:stretch;flex-direction:column}.toolbar-action{width:100%}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}.form-actions{flex-direction:column}.form-actions button{width:100%}}
     .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
     .card{background:#fff;padding:20px;border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
     .card .label{font-size:13px;color:#6b7280;font-weight:700}
@@ -77,10 +89,80 @@
 
   <section id="dashboardView" class="hidden">
     <div class="toolbar">
-      <label for="businessSelect">Comercio</label>
-      <select id="businessSelect"></select>
+      <div class="toolbar-top">
+        <div class="field">
+          <label for="businessSelect">Comercio</label>
+          <select id="businessSelect"></select>
+        </div>
+        <button id="newBusinessBtn" class="secondary toolbar-action" type="button">＋ Nuevo comercio</button>
+      </div>
       <p id="status" class="muted"></p>
     </div>
+
+    <section id="createBusinessPanel" class="create-panel hidden">
+      <h3>Nuevo comercio</h3>
+      <p class="muted">Creá el perfil base y después podremos agregar acciones, tags NFC y QR.</p>
+      <form id="createBusinessForm">
+        <div class="form-grid">
+          <div>
+            <label for="newName">Nombre del comercio *</label>
+            <input id="newName" required maxlength="100" placeholder="Ej.: Café Central">
+          </div>
+          <div>
+            <label for="newSlug">Slug / URL *</label>
+            <input id="newSlug" required maxlength="100" placeholder="cafe-central">
+            <div class="hint">Se usa en la URL pública de SmartTouch.</div>
+          </div>
+          <div class="full">
+            <label for="newDescription">Descripción</label>
+            <input id="newDescription" maxlength="180" placeholder="Café, desayunos y meriendas">
+          </div>
+          <div>
+            <label for="newCategory">Categoría *</label>
+            <select id="newCategory">
+              <option value="gastronomia">Gastronomía</option>
+              <option value="barberia">Barbería</option>
+              <option value="gym">Gym</option>
+              <option value="hotel">Hotel</option>
+              <option value="otros">Otros</option>
+            </select>
+          </div>
+          <div>
+            <label for="newTheme">Tema *</label>
+            <select id="newTheme">
+              <option value="premium">Premium</option>
+              <option value="comercial">Comercial</option>
+            </select>
+          </div>
+          <div>
+            <label for="newWhatsapp">WhatsApp</label>
+            <input id="newWhatsapp" maxlength="30" placeholder="54911...">
+          </div>
+          <div>
+            <label for="newInstagram">Instagram</label>
+            <input id="newInstagram" maxlength="120" placeholder="https://instagram.com/...">
+          </div>
+          <div>
+            <label for="newGoogle">Google Reviews</label>
+            <input id="newGoogle" maxlength="500" placeholder="https://g.page/...">
+          </div>
+          <div>
+            <label for="newMaps">Google Maps</label>
+            <input id="newMaps" maxlength="500" placeholder="https://maps.google.com/...">
+          </div>
+          <div class="full">
+            <label for="newPayment">Link de pago</label>
+            <input id="newPayment" maxlength="500" placeholder="https://link.mercadopago.com.ar/...">
+          </div>
+        </div>
+        <div id="createBusinessError" class="error hidden"></div>
+        <div id="createBusinessSuccess" class="success hidden"></div>
+        <div class="form-actions">
+          <button id="cancelNewBusinessBtn" class="secondary" type="button">Cancelar</button>
+          <button id="saveNewBusinessBtn" class="primary" type="submit">Crear comercio</button>
+        </div>
+      </form>
+    </section>
 
     <div class="cards">
       <div class="card"><div class="label">👁 VISITAS AL PERFIL</div><div id="profileViews" class="value">0</div></div>
@@ -201,6 +283,117 @@ async function initDashboard(){
   $("logoutBtn").classList.remove("hidden");
 
   await loadBusinesses();
+}
+
+function slugify(value){
+  return String(value || "")
+    .normalize("NFD").replace(/[\\u0300-\\u036f]/g,"")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-+|-+$/g,"")
+    .slice(0,100);
+}
+
+function showCreateBusinessError(message){
+  $("createBusinessError").textContent = message;
+  $("createBusinessError").classList.remove("hidden");
+  $("createBusinessSuccess").classList.add("hidden");
+}
+
+function showCreateBusinessSuccess(message){
+  $("createBusinessSuccess").textContent = message;
+  $("createBusinessSuccess").classList.remove("hidden");
+  $("createBusinessError").classList.add("hidden");
+}
+
+function resetCreateBusinessForm(){
+  $("createBusinessForm").reset();
+  $("newCategory").value = "gastronomia";
+  $("newTheme").value = "premium";
+  $("createBusinessError").classList.add("hidden");
+  $("createBusinessSuccess").classList.add("hidden");
+}
+
+function openCreateBusiness(){
+  resetCreateBusinessForm();
+  $("createBusinessPanel").classList.remove("hidden");
+  $("newName").focus();
+}
+
+function closeCreateBusiness(){
+  $("createBusinessPanel").classList.add("hidden");
+}
+
+async function createBusiness(event){
+  event.preventDefault();
+
+  const name = $("newName").value.trim();
+  const slug = slugify($("newSlug").value.trim() || name);
+  const description = $("newDescription").value.trim();
+  const category = $("newCategory").value;
+  const theme = $("newTheme").value;
+  const whatsapp = $("newWhatsapp").value.trim();
+  const instagram = $("newInstagram").value.trim();
+  const googleUrl = $("newGoogle").value.trim();
+  const mapsUrl = $("newMaps").value.trim();
+  const paymentUrl = $("newPayment").value.trim();
+
+  if(!name){
+    showCreateBusinessError("Ingresá el nombre del comercio.");
+    return;
+  }
+
+  if(!slug){
+    showCreateBusinessError("No se pudo generar un slug válido.");
+    return;
+  }
+
+  const duplicate = businesses.some(b => b.slug === slug);
+  if(duplicate){
+    showCreateBusinessError("Ese slug ya existe. Elegí otro o modificá el nombre.");
+    return;
+  }
+
+  $("saveNewBusinessBtn").disabled = true;
+  $("saveNewBusinessBtn").textContent = "Creando...";
+
+  const { data, error } = await supabaseClient
+    .from("businesses")
+    .insert({
+      name,
+      slug,
+      category,
+      theme,
+      description: description || null,
+      whatsapp: whatsapp || null,
+      instagram: instagram || null,
+      google_url: googleUrl || null,
+      maps_url: mapsUrl || null,
+      payment_url: paymentUrl || null
+    })
+    .select("id,name,slug")
+    .single();
+
+  $("saveNewBusinessBtn").disabled = false;
+  $("saveNewBusinessBtn").textContent = "Crear comercio";
+
+  if(error){
+    console.error(error);
+    showCreateBusinessError(
+      error.code === "42501"
+        ? "Supabase bloqueó la creación. Falta habilitar el permiso de INSERT para usuarios autenticados."
+        : "No se pudo crear el comercio. " + (error.message || "Revisá los datos.")
+    );
+    return;
+  }
+
+  showCreateBusinessSuccess("Comercio creado correctamente: " + data.name);
+  await loadBusinesses();
+  $("businessSelect").value = data.id;
+  await loadStats(data.id);
+
+  setTimeout(() => closeCreateBusiness(), 700);
 }
 
 async function loadBusinesses(){
@@ -427,6 +620,18 @@ function escapeHtml(value){
 }
 
 $("loginBtn").addEventListener("click",login);
+
+$("newBusinessBtn").addEventListener("click",openCreateBusiness);
+$("cancelNewBusinessBtn").addEventListener("click",closeCreateBusiness);
+$("createBusinessForm").addEventListener("submit",createBusiness);
+
+$("newName").addEventListener("input",e => {
+  const currentSlug = $("newSlug").value.trim();
+  if(!currentSlug || currentSlug === slugify($("newName").dataset.generatedFrom || "")){
+    $("newSlug").value = slugify(e.target.value);
+    $("newName").dataset.generatedFrom = e.target.value;
+  }
+});
 $("password").addEventListener("keydown",e => { if(e.key === "Enter") login(); });
 $("email").addEventListener("keydown",e => { if(e.key === "Enter") login(); });
 
