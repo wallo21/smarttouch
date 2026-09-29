@@ -713,7 +713,8 @@ function renderActionManager(){
   if(!currentActions.length){
     $("actionsManagerList").innerHTML =
       '<div class="empty">Este comercio todavía no tiene botones configurados.</div>' +
-      '<p class="small-note">Podés crear el primero con “Nuevo botón”.</p>';
+      '<p class="small-note">Podés crear botones manualmente o generar los botones básicos a partir de WhatsApp, Instagram, Maps, Google y pago del perfil.</p>' +
+      '<button type="button" class="secondary" style="margin-top:8px" onclick="seedDefaultActions()">⚡ Crear botones básicos</button>';
     return;
   }
   $("actionsManagerList").innerHTML = currentActions.map(action => {
@@ -733,6 +734,45 @@ function renderActionManager(){
     '</div>';
   }).join("");
 }
+
+async function seedDefaultActions(){
+  const businessId = $("businessSelect").value;
+  const business = businesses.find(b => b.id === businessId);
+  if(!business) return;
+
+  const defaults = [];
+  if(business.whatsapp){
+    defaults.push({business_id:businessId,label:"WhatsApp",icon:"🟢",url:"https://wa.me/" + String(business.whatsapp).replace(/\\D/g,""),event_key:"whatsapp_click",sort_order:0,active:true});
+  }
+  if(business.instagram){
+    defaults.push({business_id:businessId,label:"Instagram",icon:"📸",url:business.instagram,event_key:"instagram_click",sort_order:1,active:true});
+  }
+  if(business.maps_url){
+    defaults.push({business_id:businessId,label:"Cómo llegar",icon:"📍",url:business.maps_url,event_key:"maps_click",sort_order:2,active:true});
+  }
+  if(business.google_url){
+    defaults.push({business_id:businessId,label:"Dejanos tu opinión en Google",icon:"⭐",url:business.google_url,event_key:"google_click",sort_order:3,active:true});
+  }
+  if(business.payment_url){
+    defaults.push({business_id:businessId,label:"Pagar",icon:"💳",url:business.payment_url,event_key:"payment_click",sort_order:4,active:true});
+  }
+
+  if(!defaults.length){
+    alert("Este comercio no tiene WhatsApp, Instagram, Maps, Google o pago cargados en sus datos.");
+    return;
+  }
+
+  if(!confirm("Crear " + defaults.length + " botones básicos para " + business.name + "?")) return;
+
+  const { error } = await supabaseClient.from("actions").insert(defaults);
+  if(error){
+    console.error(error);
+    alert(error.code === "42501" ? "Falta habilitar INSERT de acciones para usuarios autenticados." : "No se pudieron crear los botones.");
+    return;
+  }
+  await loadActions(businessId);
+}
+
 async function saveAction(event){
   event.preventDefault();
   const businessId = $("businessSelect").value;
