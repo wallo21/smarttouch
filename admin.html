@@ -85,7 +85,27 @@
     <label for="password">Contraseña</label>
     <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
     <button id="loginBtn" class="primary">Ingresar</button>
+    <button id="forgotPasswordBtn" class="secondary" type="button" style="width:100%;margin-top:10px">🔑 ¿Olvidaste tu contraseña?</button>
     <div id="loginError" class="error hidden"></div>
+    <div id="forgotPanel" class="hidden" style="margin-top:18px">
+      <p class="muted">Te enviaremos un enlace para crear una contraseña nueva.</p>
+      <button id="sendRecoveryBtn" class="primary" type="button">Enviar enlace de recuperación</button>
+      <button id="cancelRecoveryBtn" class="secondary" type="button" style="width:100%;margin-top:10px">Cancelar</button>
+      <div id="recoveryMessage" class="success hidden"></div>
+      <div id="recoveryError" class="error hidden"></div>
+    </div>
+  </section>
+
+  <section id="resetView" class="login hidden">
+    <h2>Nueva contraseña</h2>
+    <p class="muted">Elegí una nueva contraseña para tu acceso de SmartTouch.</p>
+    <label for="newPassword">Nueva contraseña</label>
+    <input id="newPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+    <label for="confirmPassword">Repetir contraseña</label>
+    <input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Repetí la nueva contraseña">
+    <button id="resetPasswordBtn" class="primary" type="button">Guardar nueva contraseña</button>
+    <div id="resetError" class="error hidden"></div>
+    <div id="resetSuccess" class="success hidden"></div>
   </section>
 
   <section id="dashboardView" class="hidden">
@@ -320,6 +340,108 @@ function clearLoginError(){
   $("loginError").classList.add("hidden");
 }
 
+function showRecoveryMessage(message){
+  $("recoveryMessage").textContent = message;
+  $("recoveryMessage").classList.remove("hidden");
+  $("recoveryError").classList.add("hidden");
+}
+
+function showRecoveryError(message){
+  $("recoveryError").textContent = message;
+  $("recoveryError").classList.remove("hidden");
+  $("recoveryMessage").classList.add("hidden");
+}
+
+function showResetError(message){
+  $("resetError").textContent = message;
+  $("resetError").classList.remove("hidden");
+  $("resetSuccess").classList.add("hidden");
+}
+
+function showResetSuccess(message){
+  $("resetSuccess").textContent = message;
+  $("resetSuccess").classList.remove("hidden");
+  $("resetError").classList.add("hidden");
+}
+
+function openRecoveryPanel(){
+  $("forgotPanel").classList.remove("hidden");
+  $("recoveryMessage").classList.add("hidden");
+  $("recoveryError").classList.add("hidden");
+  $("email").focus();
+}
+
+function closeRecoveryPanel(){
+  $("forgotPanel").classList.add("hidden");
+  $("recoveryMessage").classList.add("hidden");
+  $("recoveryError").classList.add("hidden");
+}
+
+async function sendRecovery(){
+  const email = $("email").value.trim();
+  if(!email){
+    showRecoveryError("Ingresá el email de tu cuenta.");
+    $("email").focus();
+    return;
+  }
+
+  $("sendRecoveryBtn").disabled = true;
+  $("sendRecoveryBtn").textContent = "Enviando...";
+
+  const redirectTo = window.location.origin + window.location.pathname;
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email,{
+    redirectTo
+  });
+
+  $("sendRecoveryBtn").disabled = false;
+  $("sendRecoveryBtn").textContent = "Enviar enlace de recuperación";
+
+  if(error){
+    console.error(error);
+    showRecoveryError("No se pudo enviar el enlace. " + (error.message || "Revisá la configuración de recuperación en Supabase."));
+    return;
+  }
+
+  showRecoveryMessage("Listo. Revisá tu email y abrí el enlace para crear una contraseña nueva.");
+}
+
+async function resetPassword(){
+  const password = $("newPassword").value;
+  const confirm = $("confirmPassword").value;
+
+  if(password.length < 8){
+    showResetError("La contraseña debe tener al menos 8 caracteres.");
+    return;
+  }
+  if(password !== confirm){
+    showResetError("Las contraseñas no coinciden.");
+    return;
+  }
+
+  $("resetPasswordBtn").disabled = true;
+  $("resetPasswordBtn").textContent = "Guardando...";
+
+  const { error } = await supabaseClient.auth.updateUser({password});
+
+  $("resetPasswordBtn").disabled = false;
+  $("resetPasswordBtn").textContent = "Guardar nueva contraseña";
+
+  if(error){
+    console.error(error);
+    showResetError("No se pudo actualizar la contraseña. " + (error.message || ""));
+    return;
+  }
+
+  showResetSuccess("Contraseña actualizada correctamente. Ya podés ingresar al dashboard.");
+  $("newPassword").value = "";
+  $("confirmPassword").value = "";
+
+  setTimeout(() => {
+    window.history.replaceState({},document.title,window.location.pathname);
+    initDashboard();
+  },1200);
+}
+
 async function login(){
   clearLoginError();
   const email = $("email").value.trim();
@@ -351,12 +473,14 @@ async function initDashboard(){
 
   if(!session){
     $("loginView").classList.remove("hidden");
+    $("resetView").classList.add("hidden");
     $("dashboardView").classList.add("hidden");
     $("logoutBtn").classList.add("hidden");
     return;
   }
 
   $("loginView").classList.add("hidden");
+  $("resetView").classList.add("hidden");
   $("dashboardView").classList.remove("hidden");
   $("logoutBtn").classList.remove("hidden");
 
@@ -978,6 +1102,10 @@ function escapeHtml(value){
 }
 
 $("loginBtn").addEventListener("click",login);
+$("forgotPasswordBtn").addEventListener("click",openRecoveryPanel);
+$("cancelRecoveryBtn").addEventListener("click",closeRecoveryPanel);
+$("sendRecoveryBtn").addEventListener("click",sendRecovery);
+$("resetPasswordBtn").addEventListener("click",resetPassword);
 
 $("editBusinessBtn").addEventListener("click",openEditBusiness);\n$("manageActionsBtn").addEventListener("click",openActionsPanel);\n$("newActionBtn").addEventListener("click",openNewAction);\n$("cancelActionBtn").addEventListener("click",() => $("actionFormPanel").classList.add("hidden"));\n$("actionForm").addEventListener("submit",saveAction);
 $("cancelEditBusinessBtn").addEventListener("click",closeEditBusiness);
@@ -1003,7 +1131,17 @@ $("logoutBtn").addEventListener("click",async () => {
   location.reload();
 });
 
-supabaseClient.auth.onAuthStateChange(() => initDashboard());
+supabaseClient.auth.onAuthStateChange((event) => {
+  if(event === "PASSWORD_RECOVERY"){
+    $("loginView").classList.add("hidden");
+    $("dashboardView").classList.add("hidden");
+    $("logoutBtn").classList.add("hidden");
+    $("resetView").classList.remove("hidden");
+    $("newPassword").focus();
+    return;
+  }
+  initDashboard();
+});
 initDashboard();
 </script>
 </body>
