@@ -85,9 +85,9 @@
     <label for="password">Contraseña</label>
     <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
     <button id="loginBtn" class="primary">Ingresar</button>
-    <button id="forgotPasswordBtn" class="secondary" type="button" style="width:100%;margin-top:10px">🔑 ¿Olvidaste tu contraseña?</button>
+    <button id="forgotPasswordBtn" class="secondary" type="button" style="width:100%;margin-top:10px" onclick="document.getElementById('forgotPanel').classList.toggle('hidden')">🔑 ¿Olvidaste tu contraseña?</button>
     <div id="loginError" class="error hidden"></div>
-    <div id="forgotPanel" class="hidden" style="margin-top:18px">
+    <div id="forgotPanel" class="hidden" style="margin-top:18px;border-top:1px solid #e5e7eb;padding-top:16px">
       <p class="muted">Te enviaremos un enlace para crear una contraseña nueva.</p>
       <button id="sendRecoveryBtn" class="primary" type="button">Enviar enlace de recuperación</button>
       <button id="cancelRecoveryBtn" class="secondary" type="button" style="width:100%;margin-top:10px">Cancelar</button>
