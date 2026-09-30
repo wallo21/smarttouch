@@ -396,7 +396,7 @@ async function sendRecovery(){
   $("sendRecoveryBtn").disabled = true;
   $("sendRecoveryBtn").textContent = "Enviando...";
 
-  const redirectTo = window.location.origin + window.location.pathname;
+  const redirectTo = "https://wallo21.github.io/smarttouch/admin.html";
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email,{
     redirectTo
   });
