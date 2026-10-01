@@ -401,6 +401,7 @@ async function loadBusinesses() {
     const { data, error } = await supabaseClient
       .from("businesses")
       .select("*")
+      .eq("active", true)
       
 
     if (error) {
@@ -456,6 +457,7 @@ async function openFromTag(tagCode) {
         .from("businesses")
         .select("*")
         .eq("id", tag.business_id)
+        .eq("active", true)
         .single();
 
     if (businessError || !comercio) {
@@ -593,7 +595,9 @@ function buildActionButtons(actions, business){
 async function showBusiness(slug) {
   const business = businesses.find(item => item.slug === slug);
 
-  if (!business) {
+  if (!business || business.active === false) {
+    const container = document.getElementById("businesses");
+    container.innerHTML = `<div class="business"><h2>Comercio no disponible</h2><p>Este comercio no está disponible actualmente en SmartTouch.</p></div>`;
     return;
   }
 
