@@ -661,10 +661,94 @@ async function createBusiness(event){
     return;
   }
 
-  const duplicate = businesses.some(b => b.slug === slug);
-  if(duplicate){
+  const duplicateSlug = businesses.find(b => b.slug === slug);
+  if(duplicateSlug){
+    if(duplicateSlug.active === false){
+      const reactivate = confirm(
+        "Ya existe un comercio inactivo con ese slug: \"" +
+        duplicateSlug.name +
+        "\".\\n\\n¿Querés reactivarlo en lugar de crear uno nuevo?"
+      );
+      if(reactivate){
+        const { error: reactivateError } = await supabaseClient
+          .from("businesses")
+          .update({active:true})
+          .eq("id", duplicateSlug.id);
+
+        if(reactivateError){
+          console.error(reactivateError);
+          showCreateBusinessError(
+            reactivateError.code === "42501"
+              ? "Supabase bloqueó la reactivación. Falta habilitar UPDATE para usuarios autenticados."
+              : "No se pudo reactivar el comercio. " + (reactivateError.message || "")
+          );
+          return;
+        }
+
+        showCreateBusinessSuccess("Comercio reactivado: " + duplicateSlug.name);
+        await loadBusinesses(duplicateSlug.id);
+        $("businessSelect").value = duplicateSlug.id;
+        updateBusinessStatusButton(businesses.find(b => b.id === duplicateSlug.id) || null);
+        await loadStats(duplicateSlug.id);
+        setTimeout(() => closeCreateBusiness(), 700);
+        return;
+      }
+    }
+
     showCreateBusinessError("Ese slug ya existe. Elegí otro o modificá el nombre.");
     return;
+  }
+
+  const duplicateName = businesses.filter(b =>
+    String(b.name || "").trim().toLowerCase() === name.toLowerCase()
+  );
+
+  if(duplicateName.length){
+    const inactiveSameName = duplicateName.find(b => b.active === false);
+
+    if(inactiveSameName){
+      const reactivate = confirm(
+        "Ya existe un comercio inactivo llamado \"" +
+        inactiveSameName.name +
+        "\".\\n\\n¿Querés reactivarlo en lugar de crear uno nuevo?"
+      );
+
+      if(reactivate){
+        const { error: reactivateError } = await supabaseClient
+          .from("businesses")
+          .update({active:true})
+          .eq("id", inactiveSameName.id);
+
+        if(reactivateError){
+          console.error(reactivateError);
+          showCreateBusinessError(
+            reactivateError.code === "42501"
+              ? "Supabase bloqueó la reactivación. Falta habilitar UPDATE para usuarios autenticados."
+              : "No se pudo reactivar el comercio. " + (reactivateError.message || "")
+          );
+          return;
+        }
+
+        showCreateBusinessSuccess("Comercio reactivado: " + inactiveSameName.name);
+        await loadBusinesses(inactiveSameName.id);
+        $("businessSelect").value = inactiveSameName.id;
+        updateBusinessStatusButton(businesses.find(b => b.id === inactiveSameName.id) || null);
+        await loadStats(inactiveSameName.id);
+        setTimeout(() => closeCreateBusiness(), 700);
+        return;
+      }
+    }
+
+    const continueCreate = confirm(
+      "Ya existe un comercio llamado \"" +
+      name +
+      "\".\\n\\nSi se trata de otro local o sucursal, podés continuar.\\n\\n¿Querés crear igualmente este comercio?"
+    );
+
+    if(!continueCreate){
+      showCreateBusinessError("Creación cancelada. Podés cambiar el nombre o revisar el comercio existente.");
+      return;
+    }
   }
 
   $("saveNewBusinessBtn").disabled = true;
