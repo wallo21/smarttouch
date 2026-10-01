@@ -122,6 +122,14 @@
           <label for="businessSelect">Comercio</label>
           <select id="businessSelect"></select>
         </div>
+        <div class="field" style="max-width:190px">
+          <label for="businessStatusFilter">Estado</label>
+          <select id="businessStatusFilter">
+            <option value="all">Todos</option>
+            <option value="active">🟢 Activos</option>
+            <option value="inactive">🔴 Inactivos</option>
+          </select>
+        </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end"><button id="editBusinessBtn" class="secondary toolbar-action" type="button">✏️ Editar comercio</button><button id="toggleBusinessBtn" class="secondary toolbar-action" type="button">⏸️ Desactivar</button><button id="manageActionsBtn" class="secondary toolbar-action" type="button">🔘 Botones</button><button id="newBusinessBtn" class="secondary toolbar-action" type="button">＋ Nuevo comercio</button></div>
       </div>
       <p id="status" class="muted"></p>
@@ -775,7 +783,7 @@ async function toggleBusinessActive(){
   const becomingActive = business.active === false;
   const actionText = becomingActive ? "reactivar" : "desactivar";
 
-  if(!confirm("¿Querés " + actionText + " "" + business.name + ""? " + 
+  if(!confirm("¿Querés " + actionText + " \"" + business.name + "\"? " + 
     (becomingActive
       ? "Volverá a estar disponible públicamente."
       : "Dejará de estar disponible públicamente, pero conservará sus estadísticas, botones y tags."))) {
