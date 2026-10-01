@@ -667,7 +667,7 @@ async function createBusiness(event){
       const reactivate = confirm(
         "Ya existe un comercio inactivo con ese slug: \"" +
         duplicateSlug.name +
-        "\".\\n\\n¿Querés reactivarlo en lugar de crear uno nuevo?"
+        "\".\n\n¿Querés reactivarlo en lugar de crear uno nuevo?"
       );
       if(reactivate){
         const { error: reactivateError } = await supabaseClient
@@ -710,7 +710,7 @@ async function createBusiness(event){
       const reactivate = confirm(
         "Ya existe un comercio inactivo llamado \"" +
         inactiveSameName.name +
-        "\".\\n\\n¿Querés reactivarlo en lugar de crear uno nuevo?"
+        "\".\n\n¿Querés reactivarlo en lugar de crear uno nuevo?"
       );
 
       if(reactivate){
@@ -742,7 +742,7 @@ async function createBusiness(event){
     const continueCreate = confirm(
       "Ya existe un comercio llamado \"" +
       name +
-      "\".\\n\\nSi se trata de otro local o sucursal, podés continuar.\\n\\n¿Querés crear igualmente este comercio?"
+      "\".\n\nSi se trata de otro local o sucursal, podés continuar.\n\n¿Querés crear igualmente este comercio?"
     );
 
     if(!continueCreate){
