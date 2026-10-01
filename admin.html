@@ -122,7 +122,7 @@
           <label for="businessSelect">Comercio</label>
           <select id="businessSelect"></select>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end"><button id="editBusinessBtn" class="secondary toolbar-action" type="button">✏️ Editar comercio</button><button id="manageActionsBtn" class="secondary toolbar-action" type="button">🔘 Botones</button><button id="newBusinessBtn" class="secondary toolbar-action" type="button">＋ Nuevo comercio</button></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end"><button id="editBusinessBtn" class="secondary toolbar-action" type="button">✏️ Editar comercio</button><button id="toggleBusinessBtn" class="secondary toolbar-action" type="button">⏸️ Desactivar</button><button id="manageActionsBtn" class="secondary toolbar-action" type="button">🔘 Botones</button><button id="newBusinessBtn" class="secondary toolbar-action" type="button">＋ Nuevo comercio</button></div>
       </div>
       <p id="status" class="muted"></p>
     </div>
@@ -622,8 +622,9 @@ async function updateBusiness(event){
   }
 
   showEditBusinessSuccess("Cambios guardados correctamente.");
-  await loadBusinesses();
+  await loadBusinesses(id);
   $("businessSelect").value = id;
+  updateBusinessStatusButton(businesses.find(b => b.id === id) || null);
   await loadStats(id);
   setTimeout(closeEditBusiness, 700);
 }
@@ -673,7 +674,8 @@ async function createBusiness(event){
       instagram: instagram || null,
       google_url: googleUrl || null,
       maps_url: mapsUrl || null,
-      payment_url: paymentUrl || null
+      payment_url: paymentUrl || null,
+      active: true
     })
     .select("id,name,slug")
     .single();
@@ -692,19 +694,22 @@ async function createBusiness(event){
   }
 
   showCreateBusinessSuccess("Comercio creado correctamente: " + data.name);
-  await loadBusinesses();
+  await loadBusinesses(data.id);
   $("businessSelect").value = data.id;
+  updateBusinessStatusButton(businesses.find(b => b.id === data.id) || null);
   await loadStats(data.id);
 
   setTimeout(() => closeCreateBusiness(), 700);
 }
 
-async function loadBusinesses(){
+async function loadBusinesses(preferredBusinessId = null){
   $("status").textContent = "Cargando comercios...";
+
+  const previousId = preferredBusinessId || $("businessSelect").value || null;
 
   const { data, error } = await supabaseClient
     .from("businesses")
-    .select("id,name,slug,description,category,theme,whatsapp,instagram,google_url,maps_url,payment_url")
+    .select("id,name,slug,description,category,theme,whatsapp,instagram,google_url,maps_url,payment_url,active")
     .order("name");
 
   if(error){
@@ -714,14 +719,105 @@ async function loadBusinesses(){
   }
 
   businesses = data || [];
-  $("businessSelect").innerHTML = businesses.map(b =>
-    '<option value="' + b.id + '">' + escapeHtml(b.name) + '</option>'
-  ).join("");
+  renderBusinessSelect();
 
-  if(businesses.length){
-    await loadStats(businesses[0].id);
+  const selected = businesses.find(b => b.id === previousId) ||
+    businesses.find(b => matchesBusinessFilter(b)) ||
+    businesses[0];
+
+  if(selected){
+    $("businessSelect").value = selected.id;
+    updateBusinessStatusButton(selected);
+    await loadStats(selected.id);
   } else {
     $("status").textContent = "No hay comercios registrados.";
+    updateBusinessStatusButton(null);
+  }
+}
+
+function matchesBusinessFilter(business){
+  const filter = $("businessStatusFilter").value;
+  if(filter === "active") return business.active !== false;
+  if(filter === "inactive") return business.active === false;
+  return true;
+}
+
+function renderBusinessSelect(){
+  const filtered = businesses.filter(matchesBusinessFilter);
+
+  $("businessSelect").innerHTML = filtered.map(b => {
+    const statusIcon = b.active === false ? "🔴 " : "🟢 ";
+    return '<option value="' + b.id + '">' + statusIcon + escapeHtml(b.name) + '</option>';
+  }).join("");
+
+  if(!filtered.length){
+    $("businessSelect").innerHTML = '<option value="">No hay comercios en este estado</option>';
+  }
+}
+
+function updateBusinessStatusButton(business){
+  const btn = $("toggleBusinessBtn");
+  if(!btn) return;
+  if(!business){
+    btn.disabled = true;
+    btn.textContent = "⏸️ Sin comercio";
+    return;
+  }
+  btn.disabled = false;
+  btn.textContent = business.active === false ? "▶️ Reactivar" : "⏸️ Desactivar";
+}
+
+async function toggleBusinessActive(){
+  const id = $("businessSelect").value;
+  const business = businesses.find(b => b.id === id);
+  if(!business) return;
+
+  const becomingActive = business.active === false;
+  const actionText = becomingActive ? "reactivar" : "desactivar";
+
+  if(!confirm("¿Querés " + actionText + " "" + business.name + ""? " + 
+    (becomingActive
+      ? "Volverá a estar disponible públicamente."
+      : "Dejará de estar disponible públicamente, pero conservará sus estadísticas, botones y tags."))) {
+    return;
+  }
+
+  $("toggleBusinessBtn").disabled = true;
+  $("toggleBusinessBtn").textContent = "Guardando...";
+
+  const { error } = await supabaseClient
+    .from("businesses")
+    .update({active: becomingActive})
+    .eq("id", id);
+
+  if(error){
+    console.error(error);
+    $("toggleBusinessBtn").disabled = false;
+    updateBusinessStatusButton(business);
+    alert(error.code === "42501"
+      ? "Supabase bloqueó esta operación. Falta habilitar UPDATE para usuarios autenticados."
+      : "No se pudo cambiar el estado del comercio. " + (error.message || ""));
+    return;
+  }
+
+  business.active = becomingActive;
+  renderBusinessSelect();
+
+  const selectedStillVisible = businesses.some(b => b.id === id && matchesBusinessFilter(b));
+  if(selectedStillVisible){
+    $("businessSelect").value = id;
+    updateBusinessStatusButton(business);
+    await loadStats(id);
+  } else {
+    const next = businesses.find(matchesBusinessFilter);
+    if(next){
+      $("businessSelect").value = next.id;
+      updateBusinessStatusButton(next);
+      await loadStats(next.id);
+    } else {
+      updateBusinessStatusButton(null);
+      $("status").textContent = "No hay comercios en este estado.";
+    }
   }
 }
 
@@ -1116,6 +1212,14 @@ $("sendRecoveryBtn").addEventListener("click",sendRecovery);
 $("resetPasswordBtn").addEventListener("click",resetPassword);
 
 $("editBusinessBtn").addEventListener("click",openEditBusiness);
+$("toggleBusinessBtn").addEventListener("click",toggleBusinessActive);
+$("businessStatusFilter").addEventListener("change",async () => {
+  renderBusinessSelect();
+  const id = $("businessSelect").value;
+  const business = businesses.find(b => b.id === id);
+  updateBusinessStatusButton(business || null);
+  if(id) await loadStats(id);
+});
 $("manageActionsBtn").addEventListener("click",openActionsPanel);
 $("newActionBtn").addEventListener("click",openNewAction);
 $("cancelActionBtn").addEventListener("click",() => $("actionFormPanel").classList.add("hidden"));
@@ -1136,7 +1240,7 @@ $("newName").addEventListener("input",e => {
 $("password").addEventListener("keydown",e => { if(e.key === "Enter") login(); });
 $("email").addEventListener("keydown",e => { if(e.key === "Enter") login(); });
 
-$("businessSelect").addEventListener("change",async e => { closeActionsPanel(); await loadStats(e.target.value); });
+$("businessSelect").addEventListener("change",async e => { closeActionsPanel(); const business = businesses.find(b => b.id === e.target.value); updateBusinessStatusButton(business || null); await loadStats(e.target.value); });
 
 $("logoutBtn").addEventListener("click",async () => {
   await supabaseClient.auth.signOut();
